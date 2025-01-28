@@ -20,4 +20,6 @@ Cards that need to be implemented:
 - Artisan
 
 Misc
+- Better gameplay log
+- Improved visual representation of cards
 - Test cases
