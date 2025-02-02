@@ -65,7 +65,7 @@ class Player():
             self.hand._display()
             choice = convert_shorthand(input(f'You have {self.turn.value} to spend on {self.turn.buys} buys. What would you like to buy? (card name or N/n)'))
             if choice not in ['n', 'N']:
-                if self._check_card_gain(choice):
+                if self._check_card_buy(choice):
                     print(f'Buying {choice}')
                     self._supply_to_discard(choice)
                     self.turn.value -= self.supply._get_card_cost(choice)

@@ -281,73 +281,73 @@ class Workshop(ActionCard):
                         print(f'The cost of {card.name} ({card.cost}) is > 4')
             else:
                 choice_selected = True
-            
+
+class Moneylender(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Moneylender'
+        self.shorthand = 'mnl'
+        self.plus_action = 0
+        self.plus_card = 0
+        self.plus_buy = 0
+        self.cost = 4
+        self.value_str = 3
+        self.value = 0
+        self.descr = "You may trash a Copper from your hand for +3 value."
+
+    def _play(self, player):
+        if player._check_card_in_hand('Copper'):
+            player._trash('Copper')
+            self.value = 3
+        self._resolve_play(player)
 
 
 def get_card(card_name):
-    if card_name == 'Copper':
-        return Copper()
-    elif card_name == 'Silver':
-        return Silver()
-    elif card_name == 'Gold':
-        return Gold()
-    elif card_name == 'Estate':
-        return Estate()
-    elif card_name == 'Duchy':
-        return Duchy()
-    elif card_name == 'Province':
-        return Province()
-    elif card_name == 'Curse':
-        return Curse()
-    elif card_name == 'Cellar':
-        return Cellar()
-    elif card_name == 'Chapel':
-        return Chapel()
-    elif card_name == 'Harbinger':
-        return Harbinger()
-    elif card_name == 'Merchant':
-        return Merchant()
-    elif card_name == 'Vassal':
-        return Vassal()
-    elif card_name == 'Village':
-        return Village()
-    elif card_name == 'Workshop':
-        return Workshop()
+    card_classes = {
+        'Copper': Copper,
+        'Silver': Silver,
+        'Gold': Gold,
+        'Estate': Estate,
+        'Duchy': Duchy,
+        'Province': Province,
+        'Curse': Curse,
+        'Cellar': Cellar,
+        'Chapel': Chapel,
+        'Harbinger': Harbinger,
+        'Merchant': Merchant,
+        'Vassal': Vassal,
+        'Village': Village,
+        'Workshop': Workshop,
+        'Moneylender': Moneylender,
+    }
     
+    if card_n.keys()ame in card_classes:
+        return card_classes[card_name]()
     else:
-        raise Exception(f'Card {card_name} not found...')
+        raise Exception(f'Card {card_adef convert_shorthand(sh):
+    shorthand_map = {
+        'c': 'Copper',
+        's': 'Silver',
+        'g': 'Gold',
+        'e': 'Estate',
+        'd': 'Duchy',
+        'p': 'Province',
+        'crs': 'Curse',
+        'clr': 'Cellar',
+        'chp': 'Chapel',
+        'hrb': 'Harbinger',
+        'mrch': 'Merchant',
+        'vsl': 'Vassal',
+        'vlg': 'Village',
+        'wks': 'Workshop',
+        'mnl': 'Moneylender',
+    }
 
-
-def convert_shorthand(sh):
-    if sh == 'c':
-        return 'Copper'
-    elif sh == 's':
-        return 'Silver'
-    elif sh == 'g':
-        return 'Gold'
-    elif sh == 'e':
-        return 'Estate'
-    elif sh == 'd':
-        return 'Duchy'
-    elif sh == 'p':
-        return 'Province'
-    elif sh == 'crs':
-        return 'Curse'
-    elif sh == 'clr':
-        return 'Cellar'
-    elif sh == 'chp':
-        return 'Chapel'
-    elif sh == 'hrb':
-        return 'Harbinger'
-    elif sh == 'mrch':
-        return 'Merchant'
-    elif sh == 'vsl':
-        return 'Vassal'
-    elif sh == 'vlg':
-        return 'Village'
-    elif sh == 'wks':
-        return 'Workshop'
+    if sh in shorthand_map.keys()
+        return shorthand_map[sh]
     else:
+        return sh
+else:
         return sh
     
 def print_card(self):
