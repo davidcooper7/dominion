@@ -97,6 +97,12 @@ class ActionCard(Card):
     def __init__(self):
         self.type = 'Action'
         self.starting_qty = 10
+        self.plus_action = 0
+        self.plus_card = 0
+        self.plus_buy = 0
+        self.value_str = 0
+        self.value = 0
+        self.descr = ''
 
     def _resolve_play(self, player):
         player.turn.actions += self.plus_action
@@ -109,11 +115,7 @@ class Cellar(ActionCard):
         self.name = 'Cellar'
         self.shorthand = 'clr'
         self.plus_action = 1
-        self.plus_card = 0
-        self.plus_buy = 0
         self.cost = 2
-        self.value_str = 0
-        self.value = 0
         self.descr = 'Discard any number of cards. +1 Card per card discarded.'
 
     def _play(self, player):
@@ -128,18 +130,13 @@ class Chapel(ActionCard):
         super().__init__()
         self.name = 'Chapel'
         self.shorthand = 'chp'
-        self.plus_action = 0
-        self.plus_card = 0
-        self.plus_buy = 0
         self.cost = 2
-        self.value_str = 0
-        self.value = 0
         self.descr = 'Trash up to 4 cards from your hand.'  
 
     def _play(self, player):
         player.hand._display()
         trashed = 0
-        while trashed < 4 and player._user_trash():
+        while trashed < 4 and player._user_trash() and player.hand._get_ncards() > 0:
             trashed += 1
 
 class Harbinger(ActionCard):
@@ -149,10 +146,7 @@ class Harbinger(ActionCard):
         self.shorthand = 'hrb'
         self.plus_action = 1
         self.plus_card = 1
-        self.plus_buy = 0
         self.cost = 3
-        self.value_str = 0
-        self.value = 0
         self.descr = 'Look through your discard pile. You may put a card from it onto your deck.'   
 
     def _play(self, player):
@@ -167,6 +161,7 @@ class Harbinger(ActionCard):
                     if player._check_card_in_discard(choice):
                         player.discard._remove_card(choice)
                         player.draw._topdeck_card(choice)
+                        print(f'{player.name} topdecks a {choice}')
                         choice_selected = True
                 else:
                     choice_selected = True
@@ -181,10 +176,7 @@ class Merchant(ActionCard):
         self.shorthand = 'mrch'
         self.plus_action = 1
         self.plus_card = 1
-        self.plus_buy = 0
         self.cost = 3
-        self.value_str = 0
-        self.value = 0
         self.descr = 'The first time you play a Silver this turn +1 Value.'   
 
     def _play(self, player):
@@ -199,12 +191,8 @@ class Vassal(ActionCard):
         super().__init__()
         self.name = 'Vassal'
         self.shorthand = 'vsl'
-        self.plus_action = 0
-        self.plus_card = 0
-        self.plus_buy = 0
         self.cost = 3
         self.value_str = 2
-        self.value = 0
         self.descr = "Discard the top card of your deck. If it's an Action card, you may play it?"
 
     def _play(self, player):
@@ -242,11 +230,7 @@ class Village(ActionCard):
         self.shorthand = 'vlg'
         self.plus_action = 2
         self.plus_card = 1
-        self.plus_buy = 0
         self.cost = 3
-        self.value_str = 0
-        self.value = 0
-        self.descr = ""
 
     def _play(self, player):
         player._draw(1)
@@ -257,31 +241,13 @@ class Workshop(ActionCard):
         super().__init__()
         self.name = 'Workshop'
         self.shorthand = 'wks'
-        self.plus_action = 0
-        self.plus_card = 0
-        self.plus_buy = 0
         self.cost = 3
-        self.value_str = 0
-        self.value = 0
         self.descr = "Gain a card costing up to 4."
 
     def _play(self, player):
-        choice_selected = False
-        while not choice_selected:
-            player.supply._display()
-            choice = convert_shorthand(input(f'Would {player.name} like to purchase a card up to 4? (card_name or N/n)'))
-            if choice not in ['N', 'n']:
-                if player._check_card_gain(choice):
-                    card = get_card(choice)
-                    if card.cost <= 4:
-                        player.discard._add_card(choice)
-                        print(f'{player.name} gained a {card.name}')
-                        choice_selected = True
-                    else:
-                        print(f'The cost of {card.name} ({card.cost}) is > 4')
-            else:
-                choice_selected = True
-
+        player._user_gain(force=True, max_cost=4)
+        self._resolve_play(player)
+        
 class Moneylender(ActionCard):
     def __init__(self):
         super().__init__()
@@ -301,30 +267,121 @@ class Moneylender(ActionCard):
             self.value = 3
         self._resolve_play(player)
 
+class Poacher(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Poacher'
+        self.shorthand = 'pch'
+        self.plus_action = 1
+        self.plus_card = 1
+        self.plus_buy = 0
+        self.cost = 4
+        self.value_str = 1
+        self.value = 0
+        self.descr = "Discard a card per empty Supply pile."
+
+    def _play(self, player):
+        player._draw(1)
+        self.value = 1
+        n_empties = player.supply._count_empty()
+        if n_empties > 0:
+            print(f'There are {n_empties} Supply piles empty. You must discard {n_empties} cards.')
+        for i in range(n_empties):
+            player._user_discard(force=True)
+        self._resolve_play(player)
+            
+class Remodel(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Remodel'
+        self.shorthand = 'rml'
+        self.plus_action = 0
+        self.plus_card = 0
+        self.plus_buy = 0
+        self.cost = 4
+        self.value_str = 0
+        self.value = 0
+        self.descr = "Trash a card from your hand. Gain a card costing up to +2 more than it."
+
+    def _play(self, player):
+        if player.hand._get_ncards() > 0:
+            trashed_cost = player._user_trash(force=True, return_cost=True)
+            player._user_gain(force=True, max_cost=trashed_cost + 2)
+        self._resolve_play(player)
+
+class Smithy(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Smithy'
+        self.shorthand = 'smy'
+        self.plus_card = 3
+        self.cost = 4
+
+    def _play(self, player):
+        player._draw(3)
+        self._resolve_play(player)
+
+class ThroneRoom(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Throne Room'
+        self.shorthand = 'trm'
+        self.cost = 4
+        self.descr = 'You may play an Action card from your hand twice'
+
+    def _play(self, player):
+        if player.hand._has_action():
+            player.hand._display()
+            choice = convert_shorthand(input(f'Would you like to Throne Room an action? (card name or N/n)'))
+            if choice not in ['N', 'n']:
+                if player._check_card_in_hand(choice) and player._check_card_is_action(choice):
+                    if choice != 'Throne Room':
+                        card = get_card(choice)
+                        player._put_inplay(choice)
+                        card._play(player)
+                        card._play(player)
+                    else:
+                        print('Cannot Throne Room a Throne Room!')
+                        self._play(player)
+                else:
+                    self._play(player)
+        
+
+        
+
+"""
+MISC.
+"""
 
 def get_card(card_name):
     card_classes = {
-        'Copper': Copper,
-        'Silver': Silver,
-        'Gold': Gold,
-        'Estate': Estate,
-        'Duchy': Duchy,
-        'Province': Province,
-        'Curse': Curse,
-        'Cellar': Cellar,
-        'Chapel': Chapel,
-        'Harbinger': Harbinger,
-        'Merchant': Merchant,
-        'Vassal': Vassal,
-        'Village': Village,
-        'Workshop': Workshop,
-        'Moneylender': Moneylender,
+        'Copper': Copper(),
+        'Silver': Silver(),
+        'Gold': Gold(),
+        'Estate': Estate(),
+        'Duchy': Duchy(),
+        'Province': Province(),
+        'Curse': Curse(),
+        'Cellar': Cellar(),
+        'Chapel': Chapel(),
+        'Harbinger': Harbinger(),
+        'Merchant': Merchant(),
+        'Vassal': Vassal(),
+        'Village': Village(),
+        'Workshop': Workshop(),
+        'Moneylender': Moneylender(),
+        'Poacher': Poacher(),
+        'Remodel': Remodel(),
+        'Smithy': Smithy(),
+        'Throne Room': ThroneRoom()
     }
     
-    if card_n.keys()ame in card_classes:
-        return card_classes[card_name]()
+    if card_name in card_classes.keys():
+        return card_classes[card_name]
     else:
-        raise Exception(f'Card {card_adef convert_shorthand(sh):
+        raise Exception(f'Card {card_name} not found...')
+        
+def convert_shorthand(sh):
     shorthand_map = {
         'c': 'Copper',
         's': 'Silver',
@@ -341,14 +398,17 @@ def get_card(card_name):
         'vlg': 'Village',
         'wks': 'Workshop',
         'mnl': 'Moneylender',
+        'pch': 'Poacher',
+        'rml': 'Remodel',
+        'smy': 'Smithy',
+        'trm': 'Throne Room'
     }
 
-    if sh in shorthand_map.keys()
+    if sh in shorthand_map.keys():
         return shorthand_map[sh]
     else:
         return sh
-else:
-        return sh
+
     
 def print_card(self):
 

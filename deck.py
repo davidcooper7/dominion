@@ -33,6 +33,9 @@ class Deck():
         print(f'{self.name}:')
         print_cards_in_row(self.cards)
 
+    def _get_ncards(self):
+        return len(self.cards)
+
 
 class DrawPile(Deck):
     def __init__(self):

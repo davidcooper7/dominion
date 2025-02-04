@@ -1,6 +1,7 @@
 from copy import deepcopy
 from turn import Turn
 from deck import *
+import numpy as np
 
 class Player():
     
@@ -34,7 +35,6 @@ class Player():
         self._cleanup()
 
     def _play_actions(self):
-        print('Playing Actions...')
         if self.hand._has_action():
             while self.turn.actions > 0 and self.hand._has_action():
                 self.hand._display()
@@ -55,7 +55,6 @@ class Player():
             print('No Action Cards.')
 
     def _buy_cards(self):
-        print('Buying Cards...')
         self.turn.value += self.hand._get_value()
         self.turn.value += self.inplay._get_value()
         self.supply._display()
@@ -66,8 +65,7 @@ class Player():
             choice = convert_shorthand(input(f'You have {self.turn.value} to spend on {self.turn.buys} buys. What would you like to buy? (card name or N/n)'))
             if choice not in ['n', 'N']:
                 if self._check_card_buy(choice):
-                    print(f'Buying {choice}')
-                    self._supply_to_discard(choice)
+                    self._gain(choice)
                     self.turn.value -= self.supply._get_card_cost(choice)
                     self.turn.buys -= 1
             else:
@@ -80,33 +78,71 @@ class Player():
         self._remove_cards_from_play()
 
     """""""""""""""""""""""""""""""""
-              CARD MOVEMENT
+              USER CARD MOVEMENT
     """""""""""""""""""""""""""""""""
+    def _user_discard(self, force=False):
+        if self.hand._get_ncards() == 0:
+            return False
+        if force:
+            choice = convert_shorthand(input('Which card would you like to discard? (card name)'))
+        else:
+            choice = convert_shorthand(input('Would you like to discard a card? (card name or n/N)'))
+            if choice in ['n', 'N']:
+                return False
+        if self._check_card_in_hand(choice):
+            self._discard(choice)
+            self.hand._display()
+            return True
+        else:
+            return self._user_discard(force=force)
 
+    def _user_trash(self, force=False, return_cost=False):
+        if force:
+            choice = convert_shorthand(input('Which card would you like to trash? (card name)'))
+        else:
+            choice = convert_shorthand(input('Would you like to trash a card? (card name or n/N)'))
+            if choice in ['n', 'N']:
+                return False
+        if self._check_card_in_hand(choice):
+            self._trash(choice)
+            self.hand._display()
+            if return_cost:
+                return get_card(choice).cost
+            else:
+                return True
+        else:
+            return self._user_trash(force=force)
+
+    def _user_gain(self, force=False, max_cost=0):
+        self.supply._display()
+        if force:
+            choice = convert_shorthand(input(f'Which card would you like to gain for up to {max_cost}? (card name)'))
+        else:
+            choice = convert_shorthand(input(f'Would you like to gain a card for up to {max_cost}? (card name)'))
+            if choice in ['n', 'N']:
+                return False
+        if self._check_card_gain(choice, max_cost=max_cost):
+            self._gain(choice)
+        else:
+            return self._user_gain(force=force, max_cost=max_cost)
+            
+    """""""""""""""""""""""""""""""""
+          INTERNAL CARD MOVEMENT
+    """""""""""""""""""""""""""""""""
     def _draw(self, ncards=5):
         if len(self.draw.cards) >= ncards:
             for i in range(ncards):
                 self.hand.cards.append(self.draw.cards[0])
+                print(f'> {self.name} draws a {self.draw.cards[0].name}')
                 self.draw.cards.pop(0)
         else:
             self._discard_to_draw()
             self._draw(ncards)
     
-    def _supply_to_discard(self, card_name):
+    def _gain(self, card_name):
+        print(f'> {self.name} gains a {card_name}')
         self.supply._reduce_qty(card_name)
         self.discard._add_card(card_name)
-
-    def _user_discard(self):
-        choice = convert_shorthand(input('Would you like to discard a card? (card name or n/N)'))
-        if choice not in ['n', 'N']:
-            if self._check_card_in_hand(choice):
-                self._discard(choice)
-                self.hand._display()
-                return True
-            else:
-                return self._user_discard()
-        else:
-            return False
     
     def _discard(self, card_name):
         if card_name == 'Merchant' and self._check_card_in_hand('Silver'):
@@ -114,16 +150,17 @@ class Player():
         
         self.hand._remove_card(card_name)
         self.discard._add_card(card_name)
-        print(f'{self.name} discard a {card_name}.')
+        print(f'> {self.name} discards a {card_name}.')
 
     def _discard_to_draw(self):
         self.discard._shuffle()
-        print('Shuffling discard and adding to draw pile.')
+        print(f'> {self.name} shuffles')
         for card in self.discard.cards:
             self.draw._add_card(card.name)
         self.discard._empty()
 
     def _put_inplay(self, card_name):
+        print(f'> {self.name} plays a {card_name}')
         self.inplay._add_card(card_name)
         self.hand._remove_card(card_name)
 
@@ -133,31 +170,24 @@ class Player():
         self.inplay._empty()
 
     def _trash(self, card_name):
+        print(f'> {self.name} trashes a {card_name}')
         self.hand._remove_card(card_name)
-
-    def _user_trash(self):
-        choice = convert_shorthand(input('Would you like to trash a card? (card name or n/N)'))
-        if choice not in ['n', 'N']:
-            if self._check_card_in_hand(choice):
-                self._trash(choice)
-                self.hand._display()
-                return True
-            else:
-                return self._user_discard()
-        else:
-            return False        
 
     """""""""""""""""""""""""""""""""
                  CHECKS
     """""""""""""""""""""""""""""""""
 
 
-    def _check_card_gain(self, card_name):
+    def _check_card_gain(self, card_name, max_cost=np.inf):
         if card_name in self.supply._get_card_names():
             if self.supply._check_qty(card_name) > 0:
-                return True
+                if get_card(card_name).cost <= max_cost:
+                    return True
+                else:
+                    print(f'Cannot gain {card_name} with maximum cost {max_cost}')
+                    return False
             else:
-                print(f'Cannot buy {card_name} with Qty 0.')
+                print(f'Cannot gain {card_name} with Qty 0.')
                 return False
         else:
             print(f'{card_name} does not exist in the supply.')
@@ -194,6 +224,7 @@ class Player():
         else:
             print(f'{card_name} not in hand.')
             return False
+
     
 
         
