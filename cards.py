@@ -197,27 +197,29 @@ class Vassal(ActionCard):
 
     def _play(self, player):
         self.value += 2
-        if len(player.draw.cards) > 0:
-            top_card = player.draw.cards[0]
-        else:
-            player._discard_to_draw()
-            top_card = player.draw.cards[0]
-        print(f'{player.name} drew a {top_card.name}')
+        top_card = player._look_at_draw_top()
+        try:
+            print(f'{player.name} drew a {top_card.name}')
+        except:
+            print(player.draw)
+            print(player.discard)
+            print(player.hand)
+            raise Exception()
         if top_card.type == 'Action':
-            player._draw(1)
-            player.hand._display()
             choice_selected = False
             while not choice_selected:
                 choice = convert_shorthand(input(f'Would {player.name} like to play it? (Y/y or N/n)'))
                 if choice in ['N', 'n']:
                     choice_selected = True
                 elif choice in ['Y', 'y']:
-                    player._put_inplay(top_card.name)
+                    player.draw._remove_top()
+                    player.inplay._add_card(top_card.name)
                     top_card._play(player)
                     choice_selected = True
                 
         else:
-            player.draw._remove_card(top_card.name)
+            player.draw._remove_top()
+
             player.discard._add_card(top_card.name)
             print(f'{player.name} discarded a {top_card.name}')
                 
@@ -253,12 +255,8 @@ class Moneylender(ActionCard):
         super().__init__()
         self.name = 'Moneylender'
         self.shorthand = 'mnl'
-        self.plus_action = 0
-        self.plus_card = 0
-        self.plus_buy = 0
         self.cost = 4
         self.value_str = 3
-        self.value = 0
         self.descr = "You may trash a Copper from your hand for +3 value."
 
     def _play(self, player):
@@ -274,10 +272,8 @@ class Poacher(ActionCard):
         self.shorthand = 'pch'
         self.plus_action = 1
         self.plus_card = 1
-        self.plus_buy = 0
         self.cost = 4
         self.value_str = 1
-        self.value = 0
         self.descr = "Discard a card per empty Supply pile."
 
     def _play(self, player):
@@ -295,12 +291,7 @@ class Remodel(ActionCard):
         super().__init__()
         self.name = 'Remodel'
         self.shorthand = 'rml'
-        self.plus_action = 0
-        self.plus_card = 0
-        self.plus_buy = 0
         self.cost = 4
-        self.value_str = 0
-        self.value = 0
         self.descr = "Trash a card from your hand. Gain a card costing up to +2 more than it."
 
     def _play(self, player):
@@ -345,10 +336,63 @@ class ThroneRoom(ActionCard):
                         self._play(player)
                 else:
                     self._play(player)
-        
 
-        
+class Festival(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Festival'
+        self.shorthand = 'fst'
+        self.cost = 5
+        self.plus_action = 2
+        self.plus_buy = 1
+        self.value_str = 2
 
+    def _play(self, player):
+        self.value = 2
+        self._resolve_play(player)
+
+class Laboratory(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Laboratory'
+        self.shorthand = 'lab'
+        self.cost = 5
+        self.plus_action = 1
+        self.plus_card = 2
+
+    def _play(self, player):
+        self.player._draw(2)
+        self.player._resolve_play()
+
+class Library(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Library'
+        self.shorthand = 'lib'
+        self.cost = 5
+        self.descr = "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards."
+
+    def _play(self, player):
+        while player.hand._get_ncards() < 7:
+            draw_card = player._look_at_draw_top()
+            if draw_card.type == 'Action':
+                choice_selected = False
+                while not choice_selected:
+                    player.hand._display()
+                    choice = input(f'{player.name} drew a {draw_card}, would {player.name} like to keep it? (Y/y or N/n)')
+                    if choice in ['n', 'N', 'y', 'Y']:
+                        if choice in ['n', 'N']:
+                            player.draw._remove_top()
+                            player.discard._add_card(draw_card.name)
+                        elif choice in ['y', 'Y']:
+                            player._draw(1)
+                        choice_selected = True
+            else:
+                player._draw(1)
+                player.hand._display()
+                        
+                
+                
 """
 MISC.
 """
@@ -373,7 +417,10 @@ def get_card(card_name):
         'Poacher': Poacher(),
         'Remodel': Remodel(),
         'Smithy': Smithy(),
-        'Throne Room': ThroneRoom()
+        'Throne Room': ThroneRoom(),
+        'Festival': Festival(),
+        'Laboratory': Laboratory(),
+        'Library': Library()
     }
     
     if card_name in card_classes.keys():
@@ -401,7 +448,10 @@ def convert_shorthand(sh):
         'pch': 'Poacher',
         'rml': 'Remodel',
         'smy': 'Smithy',
-        'trm': 'Throne Room'
+        'trm': 'Throne Room',
+        'fst': 'Festival',
+        'lab': 'Laboratory',
+        'lib': 'Library'
     }
 
     if sh in shorthand_map.keys():

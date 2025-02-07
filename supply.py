@@ -10,7 +10,7 @@ class Supply():
         
         starting_values = [
             ['c', 's', 'g', 'crs', 'e', 'd', 'p'],
-            [60-n_players, 0, 30, self._get_n_curses(n_players), self._get_n_victory_points(n_players), \
+            [60-n_players, 40, 30, self._get_n_curses(n_players), self._get_n_victory_points(n_players), \
              self._get_n_victory_points(n_players), self._get_n_victory_points(n_players)],
             [0, 3, 6, 0, 2, 5, 8],
         ]

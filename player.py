@@ -28,7 +28,7 @@ class Player():
     
     def take_turn(self, supply):
         self.supply = supply
-        self._draw()
+        self._draw(5)
         self.turn = Turn()
         self._play_actions()
         self._buy_cards()
@@ -129,7 +129,7 @@ class Player():
     """""""""""""""""""""""""""""""""
           INTERNAL CARD MOVEMENT
     """""""""""""""""""""""""""""""""
-    def _draw(self, ncards=5):
+    def _draw(self, ncards=1):
         if len(self.draw.cards) >= ncards:
             for i in range(ncards):
                 self.hand.cards.append(self.draw.cards[0])
@@ -172,6 +172,18 @@ class Player():
     def _trash(self, card_name):
         print(f'> {self.name} trashes a {card_name}')
         self.hand._remove_card(card_name)
+
+    def _look_at_draw_top(self, ncards=1, print_bool=False):
+        if self.draw._get_ncards() >= ncards:
+            if ncards == 1:
+                if print_bool:
+                    print(ncards, self.draw.cards[0])
+                return self.draw.cards[0]
+            else:
+                return self.draw.cards[:ncards]
+        else:
+            self._discard_to_draw()
+            return self._look_at_draw_top(ncards=ncards, print_bool=True)
 
     """""""""""""""""""""""""""""""""
                  CHECKS
@@ -224,6 +236,8 @@ class Player():
         else:
             print(f'{card_name} not in hand.')
             return False
+
+    
 
     
 

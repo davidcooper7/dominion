@@ -8,6 +8,10 @@ class Deck():
     def _add_card(self, card_name):
         self.cards.append(get_card(card_name))
 
+    def _remove_top(self, ncards=1):
+        for i in range(ncards):
+            self.cards.pop(0)
+
     def _remove_card(self, card_name):
         self.cards.pop([c.name for c in self.cards].index(card_name))
 
