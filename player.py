@@ -228,8 +228,17 @@ class Player():
         if card.type == 'Action':
             return True
         else:
+            print(f'{card.name} is not an Action')
             return False
 
+    def _check_card_is_treasure(self, card_name):
+        card = get_card(card_name)
+        if card.type == 'Treasure':
+            return True
+        else:
+            print(f'{card.name} is not a Treasure')
+            return False
+            
     def _check_card_in_discard(self, card_name):
         if card_name in [c.name for c in self.discard.cards]:
             return True

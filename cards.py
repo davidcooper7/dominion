@@ -390,9 +390,58 @@ class Library(ActionCard):
             else:
                 player._draw(1)
                 player.hand._display()
-                        
-                
-                
+
+class Market(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Market'
+        self.shorthand = 'mrk'
+        self.cost = 5
+        self.plus_card = 1
+        self.plus_buy = 1
+        self.plus_action = 1
+        self.value_str = 1
+
+    def _play(self, player):
+        player._draw(1)
+        self._resolve_play(player)
+
+class Mine(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Mine'
+        self.shorthand = 'min'
+        self.cost = 5
+        self.descr = "You may trash a Treasure from your hand. Gain a Treasure to your hand costing up to +3 more than it."
+        
+    def _play(self, player):
+        if player.hand._has_treasure():
+            choice_selected = False
+            choice = convert_shorthand(input(f'Would {player.name} like to trash a Treasure for a Treasure +3? (card name or n/N)'))
+            if choice not in ['N', 'n']:
+                if player._check_card_in_hand(choice) and player._check_card_is_treasure(choice):
+                    card = get_card(choice)
+                    player._trash(choice)
+                    max_cost = card.cost + 3
+                    self._user_gain_treasure(player, max_cost)
+                else:
+                    self._play(player)
+        self._resolve_play(player)
+
+    def _user_gain_treasure(self, player, max_cost):
+        choice2 = convert_shorthand(input(f'Which Treasure would {player.name} like to gain up to {max_cost}? (card name)')) 
+        if player._check_card_gain(choice2) and player._check_card_is_treasure(choice2):
+            card = get_card(choice2)
+            if card.cost <= max_cost:
+                player._gain(choice2)
+            else:
+                print(f'Cannot gain {choice2} with max. cost of {max_cost}.')
+                self._user_gain_treasure(player, max_cost)
+        else:
+            self._user_gain_treasure(player, max_cost)
+            
+
+
 """
 MISC.
 """
@@ -420,7 +469,9 @@ def get_card(card_name):
         'Throne Room': ThroneRoom(),
         'Festival': Festival(),
         'Laboratory': Laboratory(),
-        'Library': Library()
+        'Library': Library(),
+        'Market': Market(),
+        'Mine': Mine()
     }
     
     if card_name in card_classes.keys():
@@ -451,7 +502,9 @@ def convert_shorthand(sh):
         'trm': 'Throne Room',
         'fst': 'Festival',
         'lab': 'Laboratory',
-        'lib': 'Library'
+        'lib': 'Library',
+        'mrk': 'Market',
+        'min': 'Mine'
     }
 
     if sh in shorthand_map.keys():

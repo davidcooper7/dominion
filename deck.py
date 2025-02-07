@@ -64,6 +64,13 @@ class Hand(Deck):
 
         return False
 
+    def _has_treasure(self):
+        for c in self.cards:
+            if c.type == 'Treasure':
+                return True
+
+        return False
+
 
 class InPlay(Deck):
     def __init__(self):
