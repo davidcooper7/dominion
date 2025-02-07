@@ -1,20 +1,15 @@
 Classes that need to be build
 - Game
 
+Functionality that needs to be built:
+- Pass and Play
+
 Cards that need to be implemented:
 - Bureaucrat
 - Gardens
 - Militia
-- Poacher
-- Remodel
-- Smithy
-- Throne Room
 - Bandit
 - Council Room
-- Festival
-- Laboratory
-- Library
-- Market
 - Sentry
 - Witch
 - Artisan
