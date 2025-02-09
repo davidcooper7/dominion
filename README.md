@@ -11,7 +11,6 @@ Cards that need to be implemented:
 - Bandit
 - Council Room
 - Witch
-- Artisan
 
 Misc
 - Better gameplay log
