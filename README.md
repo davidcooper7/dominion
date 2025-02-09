@@ -10,7 +10,6 @@ Cards that need to be implemented:
 - Militia
 - Bandit
 - Council Room
-- Sentry
 - Witch
 - Artisan
 
