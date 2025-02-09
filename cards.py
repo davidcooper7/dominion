@@ -156,7 +156,7 @@ class Harbinger(ActionCard):
             player.discard._display()
             choice_selected = False
             while not choice_selected:
-                choice = convert_shorthand(input('Would you like to put a discarded card onto your deck? (card name or N/n)'))
+                choice = read_input(input('Would you like to put a discarded card onto your deck? (card name or N/n)'), player)
                 if choice not in ['N', 'n']:
                     if player._check_card_in_discard(choice):
                         player.discard._remove_card(choice)
@@ -202,7 +202,7 @@ class Vassal(ActionCard):
         if top_card.type == 'Action':
             choice_selected = False
             while not choice_selected:
-                choice = convert_shorthand(input(f'Would {player.name} like to play it? (Y/y or N/n)'))
+                choice = read_input(input(f'Would {player.name} like to play it? (Y/y or N/n)'), player)
                 if choice in ['N', 'n']:
                     choice_selected = True
                 elif choice in ['Y', 'y']:
@@ -311,7 +311,7 @@ class ThroneRoom(ActionCard):
     def _play(self, player):
         if player.hand._has_action():
             player.hand._display()
-            choice = convert_shorthand(input(f'Would you like to Throne Room an action? (card name or N/n)'))
+            choice = read_input(input(f'Would you like to Throne Room an action? (card name or N/n)'), player)
             if choice not in ['N', 'n']:
                 if player._check_card_in_hand(choice) and player._check_card_is_action(choice):
                     if choice != 'Throne Room':
@@ -357,7 +357,7 @@ class Library(ActionCard):
         super().__init__()
         self.name = 'Library'
         self.shorthand = 'lib'
-        self.cost = 0
+        self.cost = 5
         self.descr = "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards."
 
     def _play(self, player):
@@ -405,7 +405,7 @@ class Mine(ActionCard):
     def _play(self, player):
         if player.hand._has_treasure():
             choice_selected = False
-            choice = convert_shorthand(input(f'Would {player.name} like to trash a Treasure for a Treasure +3? (card name or n/N)'))
+            choice = read_input(input(f'Would {player.name} like to trash a Treasure for a Treasure +3? (card name or n/N)'), player)
             if choice not in ['N', 'n']:
                 if player._check_card_in_hand(choice) and player._check_card_is_treasure(choice):
                     card = get_card(choice)
@@ -417,7 +417,7 @@ class Mine(ActionCard):
         self._resolve_play(player)
 
     def _user_gain_treasure(self, player, max_cost):
-        choice2 = convert_shorthand(input(f'Which Treasure would {player.name} like to gain up to {max_cost}? (card name)')) 
+        choice2 = read_input(input(f'Which Treasure would {player.name} like to gain up to {max_cost}? (card name)'), player) 
         if player._check_card_gain(choice2) and player._check_card_is_treasure(choice2):
             card = get_card(choice2)
             if card.cost <= max_cost:
@@ -435,7 +435,7 @@ class Sentry(ActionCard):
         self.shorthand = 'snt'
         self.plus_card = 1
         self.plus_action = 1
-        self.cost = 0
+        self.cost = 5
         self.descr = "Look at the top two cards of your deck. Trash and/or discard any number of them. Put the rest back in any order."
 
     def _play(self, player):
@@ -455,7 +455,7 @@ class Sentry(ActionCard):
         choice = ''
         while choice not in ['n', 'N'] and player.lookat._get_ncards() > 0:
             player.lookat._display()
-            choice = convert_shorthand(input(f'Would {player.name} like to trash a card? (card name or n/N)'))
+            choice = read_input(input(f'Would {player.name} like to trash a card? (card name or n/N)'), player)
             if choice in ['n', 'N']:
                 break
             if player._check_card_in_lookat(choice):
@@ -465,7 +465,7 @@ class Sentry(ActionCard):
         choice = ''
         while choice not in ['n', 'N'] and player.lookat._get_ncards() > 0:
             player.lookat._display()
-            choice = convert_shorthand(input(f'Would {player.name} like to discard a card? (card name or n/N)'))
+            choice = read_input(input(f'Would {player.name} like to discard a card? (card name or n/N)'), player)
             if choice in ['n', 'N']:
                 break
             elif player._check_card_in_lookat(choice):
@@ -474,11 +474,42 @@ class Sentry(ActionCard):
     def _user_order(self, player):
         while player.lookat._get_ncards() > 0:
             player.lookat._display()
-            choice = convert_shorthand(input(f'Which card {player.name} like to put on top of draw pile first? (card name)'))
+            choice = read_input(input(f'Which card {player.name} like to put on top of draw pile first? (card name)'), player)
             if player._check_card_in_lookat(choice):
                 player._lookat_to_topdeck(choice)
                 last_card_name = player.lookat.cards[0].name
                 player._lookat_to_topdeck(last_card_name)
+
+class Artisan(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Artisan'
+        self.shorthand = 'art'
+        self.cost = 0
+        self.descr = "Gain a card to your hand costing up to +5. Put a card from your hand onto your deck."
+
+    def _play(self, player):
+        self._gain(player)
+        self._topdeck(player)
+
+    def _gain(self, player):
+        choice_selected = False
+        while not choice_selected:
+            player.supply._display()
+            choice = read_input(input(f'Which card would {player.name} like to gain for up to 5? (card name)'), player)
+            if player._check_card_gain(choice, max_cost=5):
+                player._gain_to_hand(choice)   
+                choice_selected = True
+
+    def _topdeck(self, player):
+        choice_selected = False
+        while not choice_selected:
+            player.hand._display()
+            choice = convert_shorthand(input(f'Which card would {player.name} like to topdeck? (card name)'), player)
+            if player._check_card_in_hand(choice):
+                player._hand_to_topdeck(choice)
+                choice_selected = True
+
 
 """
 MISC.
@@ -510,14 +541,25 @@ def get_card(card_name):
         'Library': Library(),
         'Market': Market(),
         'Mine': Mine(),
-        'Sentry': Sentry()
+        'Sentry': Sentry(),
+        'Artisan': Artisan()
     }
     
     if card_name in card_classes.keys():
         return card_classes[card_name]
     else:
         raise Exception(f'Card {card_name} not found...')
-        
+
+def read_input(input, player):
+    if input == 'Supply':
+        player.supply._display()
+        return read_input('', player)
+    elif input == 'Hand':
+        player.hand._display()
+        return read_input('', player)
+    else:
+        return convert_shorthand(input)
+
 def convert_shorthand(sh):
     shorthand_map = {
         'c': 'Copper',
@@ -544,7 +586,8 @@ def convert_shorthand(sh):
         'lib': 'Library',
         'mrk': 'Market',
         'min': 'Mine',
-        'snt': 'Sentry'
+        'snt': 'Sentry',
+        'art': 'Artisan'
     }
 
     if sh in shorthand_map.keys():

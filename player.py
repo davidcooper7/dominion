@@ -38,11 +38,11 @@ class Player():
         if self.hand._has_action():
             while self.turn.actions > 0 and self.hand._has_action():
                 self.hand._display()
-                choice = convert_shorthand(input('\n'.join([f'{self.name} has {self.inplay._get_inplay()} in-play with:',
+                choice = read_input(input('\n'.join([f'{self.name} has {self.inplay._get_inplay()} in-play with:',
                                                             f'\t{self.turn.actions} actions remaining', 
                                                             f'\t{self.turn.buys} buys remaining',
                                                             f'\t{self.turn.value} value in-play', 
-                                                            f'What action would {self.name} like to play? (card name or N/n)'])))
+                                                            f'What action would {self.name} like to play? (card name or N/n)'])), self)
                 if choice not in ['n', 'N']:
                     if self._check_card_in_hand(choice) and self._check_card_is_action(choice):
                         card = get_card(choice)
@@ -62,7 +62,7 @@ class Player():
         choice = None
         while self.turn.buys > 0:
             self.hand._display()
-            choice = convert_shorthand(input(f'You have {self.turn.value} to spend on {self.turn.buys} buys. What would you like to buy? (card name or N/n)'))
+            choice = read_input(input(f'You have {self.turn.value} to spend on {self.turn.buys} buys. What would you like to buy? (card name or N/n)'), self)
             if choice not in ['n', 'N']:
                 if self._check_card_buy(choice):
                     self._gain(choice)
@@ -84,9 +84,9 @@ class Player():
         if self.hand._get_ncards() == 0:
             return False
         if force:
-            choice = convert_shorthand(input('Which card would you like to discard? (card name)'))
+            choice = read_input(input('Which card would you like to discard? (card name)'), self)
         else:
-            choice = convert_shorthand(input('Would you like to discard a card? (card name or n/N)'))
+            choice = read_input(input('Would you like to discard a card? (card name or n/N)'), self)
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_hand(choice):
@@ -98,9 +98,9 @@ class Player():
 
     def _user_trash(self, force=False, return_cost=False):
         if force:
-            choice = convert_shorthand(input('Which card would you like to trash? (card name)'))
+            choice = read_input(input('Which card would you like to trash? (card name)'), self)
         else:
-            choice = convert_shorthand(input('Would you like to trash a card? (card name or n/N)'))
+            choice = read_input(input('Would you like to trash a card? (card name or n/N)'), self)
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_hand(choice):
@@ -116,9 +116,9 @@ class Player():
     def _user_gain(self, force=False, max_cost=0):
         self.supply._display()
         if force:
-            choice = convert_shorthand(input(f'Which card would you like to gain for up to {max_cost}? (card name)'))
+            choice = read_input(input(f'Which card would you like to gain for up to {max_cost}? (card name)'), self)
         else:
-            choice = convert_shorthand(input(f'Would you like to gain a card for up to {max_cost}? (card name)'))
+            choice = read_input(input(f'Would you like to gain a card for up to {max_cost}? (card name)'), self)
             if choice in ['n', 'N']:
                 return False
         if self._check_card_gain(choice, max_cost=max_cost):
@@ -143,6 +143,11 @@ class Player():
         print(f'> {self.name} gains a {card_name}')
         self.supply._reduce_qty(card_name)
         self.discard._add_card(card_name)
+
+    def _gain_to_hand(self, card_name):
+        print(f'> {self.name} gains a {card_name} to their hand.')
+        self.supply._reduce_qty(card_name)
+        self.hand._add_card(card_name)
     
     def _discard(self, card_name):
         if card_name == 'Merchant' and self._check_card_in_hand('Silver'):
@@ -190,7 +195,6 @@ class Player():
         self.hand._add_card(card_name)
         print(f'> {self.name} draws a {card_name}')
 
-
     def _lookat_to_discard(self, card_name):
         self.lookat._remove_card(card_name)
         self.discard._add_card(card_name)
@@ -209,6 +213,12 @@ class Player():
         self.lookat._remove_card(card_name)
         print(f'> {self.name} plays a {card_name}')
         self.inplay._add_card(card_name)
+
+    def _hand_to_topdeck(self, card_name):
+        self.hand._remove_card(card_name)
+        self.draw._topdeck_card(card_name)
+        print(f'> {self.name} topdecks a {card_name}')
+
         
     """""""""""""""""""""""""""""""""
                  CHECKS
@@ -226,6 +236,8 @@ class Player():
             else:
                 print(f'Cannot gain {card_name} with Qty 0.')
                 return False
+        elif card_name == '':
+            return False
         else:
             print(f'{card_name} does not exist in the supply.')
             self.supply._display()
@@ -244,6 +256,8 @@ class Player():
     def _check_card_in_hand(self, card_name):
         if card_name in self.hand._get_names():
             return True
+        elif card_name == '':
+            return False
         else:
             print(f'{card_name} not in hand.')
             return False
@@ -252,6 +266,8 @@ class Player():
         card = get_card(card_name)
         if card.type == 'Action':
             return True
+        elif card_name == '':
+            return False
         else:
             print(f'{card.name} is not an Action')
             return False
@@ -260,6 +276,8 @@ class Player():
         card = get_card(card_name)
         if card.type == 'Treasure':
             return True
+        elif card_name == '':
+            return False
         else:
             print(f'{card.name} is not a Treasure')
             return False
@@ -267,6 +285,8 @@ class Player():
     def _check_card_in_discard(self, card_name):
         if card_name in self.discard._get_names():
             return True
+        elif card_name == '':
+            return False
         else:
             print(f'{card_name} not in hand.')
             return False
@@ -274,6 +294,8 @@ class Player():
     def _check_card_in_lookat(self, card_name):
         if card_name in self.lookat._get_names():
             return True
+        elif card_name == '':
+            return False
         else:
             print(f'{card_name} not an option.')
             return False
