@@ -197,14 +197,8 @@ class Vassal(ActionCard):
 
     def _play(self, player):
         self.value += 2
-        top_card = player._look_at_draw_top()
-        try:
-            print(f'{player.name} drew a {top_card.name}')
-        except:
-            print(player.draw)
-            print(player.discard)
-            print(player.hand)
-            raise Exception()
+        player._lookat_draw_top()
+        top_card = player.lookat.cards[0]
         if top_card.type == 'Action':
             choice_selected = False
             while not choice_selected:
@@ -212,17 +206,11 @@ class Vassal(ActionCard):
                 if choice in ['N', 'n']:
                     choice_selected = True
                 elif choice in ['Y', 'y']:
-                    player.draw._remove_top()
-                    player.inplay._add_card(top_card.name)
+                    player._lookat_to_inplay(top_card.name)
                     top_card._play(player)
-                    choice_selected = True
-                
+                    choice_selected = True   
         else:
-            player.draw._remove_top()
-
-            player.discard._add_card(top_card.name)
-            print(f'{player.name} discarded a {top_card.name}')
-                
+            player._lookat_to_discard(top_card.name)
         self._resolve_play(player)
     
 class Village(ActionCard):
@@ -369,12 +357,13 @@ class Library(ActionCard):
         super().__init__()
         self.name = 'Library'
         self.shorthand = 'lib'
-        self.cost = 5
+        self.cost = 0
         self.descr = "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards."
 
     def _play(self, player):
         while player.hand._get_ncards() < 7:
-            draw_card = player._look_at_draw_top()
+            player._lookat_draw_top()
+            draw_card = player.lookat.cards[0]
             if draw_card.type == 'Action':
                 choice_selected = False
                 while not choice_selected:
@@ -382,13 +371,12 @@ class Library(ActionCard):
                     choice = input(f'{player.name} drew a {draw_card}, would {player.name} like to keep it? (Y/y or N/n)')
                     if choice in ['n', 'N', 'y', 'Y']:
                         if choice in ['n', 'N']:
-                            player.draw._remove_top()
-                            player.discard._add_card(draw_card.name)
+                            player._lookat_to_discard(draw_card.name)
                         elif choice in ['y', 'Y']:
-                            player._draw(1)
+                            player._lookat_to_hand(draw_card.name)
                         choice_selected = True
             else:
-                player._draw(1)
+                player._lookat_to_hand(draw_card.name)
                 player.hand._display()
 
 class Market(ActionCard):
@@ -439,8 +427,58 @@ class Mine(ActionCard):
                 self._user_gain_treasure(player, max_cost)
         else:
             self._user_gain_treasure(player, max_cost)
-            
 
+class Sentry(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Sentry'
+        self.shorthand = 'snt'
+        self.plus_card = 1
+        self.plus_action = 1
+        self.cost = 0
+        self.descr = "Look at the top two cards of your deck. Trash and/or discard any number of them. Put the rest back in any order."
+
+    def _play(self, player):
+        player._draw(1)
+        player._lookat_draw_top(2)
+        self._user_trash(player)
+        if player.lookat._get_ncards() > 0:
+            self._user_discard(player)
+        if player.lookat._get_ncards() > 0:
+            if player.lookat._get_ncards() > 1:
+                self._user_order(player)
+            else:
+                player._lookat_to_topdeck(player.lookat.cards[0].name)
+        self._resolve_play(player)
+
+    def _user_trash(self, player):
+        choice = ''
+        while choice not in ['n', 'N'] and player.lookat._get_ncards() > 0:
+            player.lookat._display()
+            choice = convert_shorthand(input(f'Would {player.name} like to trash a card? (card name or n/N)'))
+            if choice in ['n', 'N']:
+                break
+            if player._check_card_in_lookat(choice):
+                player._lookat_to_trash(choice)
+                
+    def _user_discard(self, player):
+        choice = ''
+        while choice not in ['n', 'N'] and player.lookat._get_ncards() > 0:
+            player.lookat._display()
+            choice = convert_shorthand(input(f'Would {player.name} like to discard a card? (card name or n/N)'))
+            if choice in ['n', 'N']:
+                break
+            elif player._check_card_in_lookat(choice):
+                player._lookat_to_discard(choice)
+
+    def _user_order(self, player):
+        while player.lookat._get_ncards() > 0:
+            player.lookat._display()
+            choice = convert_shorthand(input(f'Which card {player.name} like to put on top of draw pile first? (card name)'))
+            if player._check_card_in_lookat(choice):
+                player._lookat_to_topdeck(choice)
+                last_card_name = player.lookat.cards[0].name
+                player._lookat_to_topdeck(last_card_name)
 
 """
 MISC.
@@ -471,7 +509,8 @@ def get_card(card_name):
         'Laboratory': Laboratory(),
         'Library': Library(),
         'Market': Market(),
-        'Mine': Mine()
+        'Mine': Mine(),
+        'Sentry': Sentry()
     }
     
     if card_name in card_classes.keys():
@@ -504,7 +543,8 @@ def convert_shorthand(sh):
         'lab': 'Laboratory',
         'lib': 'Library',
         'mrk': 'Market',
-        'min': 'Mine'
+        'min': 'Mine',
+        'snt': 'Sentry'
     }
 
     if sh in shorthand_map.keys():

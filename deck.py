@@ -12,6 +12,9 @@ class Deck():
         for i in range(ncards):
             self.cards.pop(0)
 
+    def _get_names(self):
+        return [c.name for c in self.cards]
+    
     def _remove_card(self, card_name):
         self.cards.pop([c.name for c in self.cards].index(card_name))
 
@@ -28,7 +31,7 @@ class Deck():
         return sum([c.value for c in self.cards])
 
     def __str__(self):
-        return f'{[c.name for c in self.cards]}'
+        return f'{", ".join([c.name for c in self.cards])}'
 
     def __repr__(self):
         return f'{[c.name for c in self.cards]}'
@@ -85,6 +88,11 @@ class DiscardPile(Deck):
     def __init__(self):
         super().__init__()
         self.name = 'Discard'
+
+class LookAt(Deck):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Look At'
 
         
     

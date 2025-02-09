@@ -173,18 +173,43 @@ class Player():
         print(f'> {self.name} trashes a {card_name}')
         self.hand._remove_card(card_name)
 
-    def _look_at_draw_top(self, ncards=1, print_bool=False):
+    def _lookat_draw_top(self, ncards=1):
+        self.lookat = LookAt()
         if self.draw._get_ncards() >= ncards:
-            if ncards == 1:
-                if print_bool:
-                    print(ncards, self.draw.cards[0])
-                return self.draw.cards[0]
-            else:
-                return self.draw.cards[:ncards]
+            for i in range(ncards):
+                self.lookat._add_card(self.draw.cards[0].name)
+                self.draw._remove_top()
         else:
             self._discard_to_draw()
-            return self._look_at_draw_top(ncards=ncards, print_bool=True)
+            self._lookat_draw_top(ncards=ncards)
 
+        print(f'> {self.name} looks at {self.lookat}')
+
+    def _lookat_to_hand(self, card_name):
+        self.lookat._remove_card(card_name)
+        self.hand._add_card(card_name)
+        print(f'> {self.name} draws a {card_name}')
+
+
+    def _lookat_to_discard(self, card_name):
+        self.lookat._remove_card(card_name)
+        self.discard._add_card(card_name)
+        print(f'> {self.name} discards a {card_name}')
+
+    def _lookat_to_trash(self, card_name):
+        self.lookat._remove_card(card_name)
+        print(f'> {self.name} trashes a {card_name}')
+
+    def _lookat_to_topdeck(self, card_name):
+        self.lookat._remove_card(card_name)
+        self.draw._topdeck_card(card_name)
+        print(f'> {self.name} topdecks a {card_name}')
+
+    def _lookat_to_inplay(self, card_name):
+        self.lookat._remove_card(card_name)
+        print(f'> {self.name} plays a {card_name}')
+        self.inplay._add_card(card_name)
+        
     """""""""""""""""""""""""""""""""
                  CHECKS
     """""""""""""""""""""""""""""""""
@@ -217,7 +242,7 @@ class Player():
 
 
     def _check_card_in_hand(self, card_name):
-        if card_name in [c.name for c in self.hand.cards]:
+        if card_name in self.hand._get_names():
             return True
         else:
             print(f'{card_name} not in hand.')
@@ -240,10 +265,17 @@ class Player():
             return False
             
     def _check_card_in_discard(self, card_name):
-        if card_name in [c.name for c in self.discard.cards]:
+        if card_name in self.discard._get_names():
             return True
         else:
             print(f'{card_name} not in hand.')
+            return False
+
+    def _check_card_in_lookat(self, card_name):
+        if card_name in self.lookat._get_names():
+            return True
+        else:
+            print(f'{card_name} not an option.')
             return False
 
     
