@@ -3,10 +3,10 @@ import pandas as pd
 pd.set_option('display.width', 100)
 pd.set_option('display.max_colwidth', 50)
 from IPython.display import display
-from cards import *
+from cards.utils import *
 
 class Supply():
-    def __init__(self, n_players, kindom_card_names):
+    def __init__(self, n_players, kingdom_card_names):
         
         starting_values = [
             ['c', 's', 'g', 'crs', 'e', 'd', 'p'],
@@ -17,10 +17,10 @@ class Supply():
         
         self.supply = pd.DataFrame(starting_values, columns=['Copper', 'Silver', 'Gold', 'Curse', 'Estate', 'Duchy', 'Province'], index=['Shorthand', 'Qty', 'Cost'])    
 
-        for name in kindom_card_names:
+        kingdom_card_names = list(np.array(kingdom_card_names)[np.argsort([get_card(name).cost for name in kingdom_card_names])])
+        for name in kingdom_card_names:
             card = get_card(name)
             self.supply[card.name] = [card.shorthand, card.starting_qty, card.cost]
-        self._display()
 
 
     def _get_n_curses(self, n_players):

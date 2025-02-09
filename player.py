@@ -2,6 +2,8 @@ from copy import deepcopy
 from turn import Turn
 from deck import *
 import numpy as np
+from typing import List
+from cards.utils import *
 
 class Player():
     
@@ -12,6 +14,10 @@ class Player():
     def __init__(self, name: str):
         self.name = name
         self._init_deck()
+        self.opponents = []
+
+    def _add_opponent(self, opponents):
+        self.opponents.append(opponents)
 
     def _init_deck(self):
         self.deck = Deck()
@@ -20,7 +26,13 @@ class Player():
         self.inplay = InPlay()
         self.discard = DiscardPile()
         self.draw._shuffle()
+        self._draw(5)
 
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
 
     """""""""""""""""""""""""""""""""
                TURN ACTIONS
@@ -28,11 +40,12 @@ class Player():
     
     def take_turn(self, supply):
         self.supply = supply
-        self._draw(5)
         self.turn = Turn()
         self._play_actions()
         self._buy_cards()
         self._cleanup()
+        self._draw(5)
+
 
     def _play_actions(self):
         if self.hand._has_action():
@@ -56,13 +69,12 @@ class Player():
 
     def _buy_cards(self):
         self.turn.value += self.hand._get_value()
-        self.turn.value += self.inplay._get_value()
         self.supply._display()
 
         choice = None
         while self.turn.buys > 0:
             self.hand._display()
-            choice = read_input(input(f'You have {self.turn.value} to spend on {self.turn.buys} buys. What would you like to buy? (card name or N/n)'), self)
+            choice = read_input(input(f'{self.name} have {self.turn.value} to spend on {self.turn.buys} buys. What would {self.name} like to buy? (card name or N/n)'), self)
             if choice not in ['n', 'N']:
                 if self._check_card_buy(choice):
                     self._gain(choice)
@@ -84,9 +96,9 @@ class Player():
         if self.hand._get_ncards() == 0:
             return False
         if force:
-            choice = read_input(input('Which card would you like to discard? (card name)'), self)
+            choice = read_input(input(f'Which card would {self.name} like to discard? (card name)'), self)
         else:
-            choice = read_input(input('Would you like to discard a card? (card name or n/N)'), self)
+            choice = read_input(input(f'Would {self.name} like to discard a card? (card name or n/N)'), self)
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_hand(choice):
@@ -98,9 +110,9 @@ class Player():
 
     def _user_trash(self, force=False, return_cost=False):
         if force:
-            choice = read_input(input('Which card would you like to trash? (card name)'), self)
+            choice = read_input(input(f'Which card would {self.name} like to trash? (card name)'), self)
         else:
-            choice = read_input(input('Would you like to trash a card? (card name or n/N)'), self)
+            choice = read_input(input(f'Would {self.name} like to trash a card? (card name or n/N)'), self)
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_hand(choice):
@@ -116,16 +128,32 @@ class Player():
     def _user_gain(self, force=False, max_cost=0):
         self.supply._display()
         if force:
-            choice = read_input(input(f'Which card would you like to gain for up to {max_cost}? (card name)'), self)
+            choice = read_input(input(f'Which card would {self.name} like to gain for up to {max_cost}? (card name)'), self)
         else:
-            choice = read_input(input(f'Would you like to gain a card for up to {max_cost}? (card name)'), self)
+            choice = read_input(input(f'Would {self.name} like to gain a card for up to {max_cost}? (card name or n/N)'), self)
             if choice in ['n', 'N']:
                 return False
         if self._check_card_gain(choice, max_cost=max_cost):
             self._gain(choice)
         else:
             return self._user_gain(force=force, max_cost=max_cost)
-            
+
+    def _user_hand_to_topdeck(self, force=False, type='any'):
+        if force:
+            self.hand._display()
+            choice = read_input(input(f'Which card would {self.name} like to topdeck of type {type}? (card name)'), self)
+        else:
+            choice = read_input(input(f'Which card would {self.name} like to topdeck of type {type}? (card name or n/N)'), self)
+            if choice in ['n', 'N']:
+                return False
+        if self._check_card_in_hand(choice):
+            if type == 'any' or get_card(choice).type == type:
+                self._hand_to_topdeck(choice)
+            else:
+                return self._user_hand_to_topdeck(force=force, type=type)
+        else:
+            return self._user_hand_to_topdeck(force=force, type=type)
+                
     """""""""""""""""""""""""""""""""
           INTERNAL CARD MOVEMENT
     """""""""""""""""""""""""""""""""
@@ -148,7 +176,12 @@ class Player():
         print(f'> {self.name} gains a {card_name} to their hand.')
         self.supply._reduce_qty(card_name)
         self.hand._add_card(card_name)
-    
+
+    def _gain_to_draw(self, card_name):
+        print(f'> {self.name} topdecks a {card_name}')
+        self.supply._reduce_qty(card_name)
+        self.draw._topdeck_card(card_name)  
+        
     def _discard(self, card_name):
         if card_name == 'Merchant' and self._check_card_in_hand('Silver'):
             self.turn.value -= 1
@@ -218,6 +251,16 @@ class Player():
         self.hand._remove_card(card_name)
         self.draw._topdeck_card(card_name)
         print(f'> {self.name} topdecks a {card_name}')
+
+    def _finish(self):
+        for card_name in self.hand._get_names():
+            self.deck._add_card(card_name)
+        for card_name in self.draw._get_names():
+            self.deck._add_card(card_name)
+        for card_name in self.discard._get_names():
+            self.deck._add_card(card_name)
+
+        return self.deck._count_victory_points()
 
         
     """""""""""""""""""""""""""""""""

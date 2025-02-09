@@ -1,8 +1,10 @@
 from player import Player
 from supply import Supply
 from cards import *
+from game import Game
 
-s = Supply(2, ['Cellar', 'Chapel', 'Harbinger', 'Merchant', 'Market', 'Moneylender', 'Festival', 'Artisan', 'Vassal', 'Library', 'Sentry'])
-p = Player('George')
-for i in range(1000):
-    p.take_turn(s)
+p1 = Player('David')
+p2 = Player('Joseph')
+
+game = Game(players=[p1, p2])
+game.play()

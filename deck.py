@@ -1,5 +1,6 @@
-from cards import *
+from cards.utils import *
 from random import shuffle
+import numpy as np
 
 class Deck():
     def __init__(self):
@@ -43,6 +44,12 @@ class Deck():
     def _get_ncards(self):
         return len(self.cards)
 
+    def _count_victory_points(self):
+        points = 0
+        for c in self.cards:
+            points += c.points   
+        return points
+
 
 class DrawPile(Deck):
     def __init__(self):
@@ -64,15 +71,27 @@ class Hand(Deck):
         for c in self.cards:
             if c.type == 'Action':
                 return True
-
         return False
 
     def _has_treasure(self):
         for c in self.cards:
             if c.type == 'Treasure':
                 return True
-
         return False
+
+    def _has_victory_point(self):
+        for c in self.cards:
+            if c.type == 'Victory Point':
+                return True
+        return False
+
+    def _count_victory_point_cards(self):
+        types = np.array([])
+        for c in self.cards:
+            print(c.type)
+            types = np.append(types, c.type)
+        print('!!!types', types)
+        return len(np.where(types == 'Victory Point')[0])
 
 
 class InPlay(Deck):
