@@ -15,7 +15,8 @@ class Game():
                 for name in ['Cellar', 'Chapel',  
                              'Harbinger', 'Merchant', 'Vassal', 'Village', 'Workshop',
                              'Bureaucrat', 'Militia', 'Gardens', 'Moneylender', 'Poacher', 'Remodel', 'Smithy', 'Throne Room',
-                             'Bandit', 'Festival', 'Laboratory', 'Library', 'Market', 'Mine', 'Sentry', 'Artisan']:
+                             'Bandit', 'Council Room', 'Festival', 'Laboratory', 'Library', 'Market', 'Mine', 'Sentry', 'Witch',
+                             'Artisan']:
                     card_pool.append(name)
 
         kingdom_cards = random.sample(card_pool, 10)

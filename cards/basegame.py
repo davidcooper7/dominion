@@ -1,20 +1,10 @@
 import sys, os
-
-__all__ = ['Copper', 'Silver', 'Gold', \
-           'Estate', 'Duchy', 'Province', 'Curse', \
-           'Cellar', 'Chapel', \
-           'Harbinger', 'Merchant', 'Vassal', 'Village', 'Workshop', \
-           'Bureaucrat', 'Moneylender', 'Poacher', 'Remodel', 'Smithy', 'ThroneRoom', \
-           'Festival', 'Laboratory', 'Library', 'Market', 'Mine', 'Sentry',  \
-           'Artisan']
            
-
 class Card():
     def __str__(self):
         return self.name
     def __repr__(self):
         return self.name
-
 
 """
 TREASURE CARDS
@@ -458,6 +448,22 @@ class Bandit(ActionCard):
                     opp._lookat_to_discard(opp.lookat.cards[0].name)
         self._resolve_play(player)
 
+class CouncilRoom(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Council Room'
+        self.shorthand = 'crm'
+        self.cost = 5
+        self.plus_card = 4
+        self.plus_buy = 1
+        self.descr = "Each other player draws a card."
+
+    def _play(self, player):
+        player._draw(4)
+        for opp in player.opponents:
+            opp._draw(1)
+        self._resolve_play(player)
+
 class Festival(ActionCard):
     def __init__(self):
         super().__init__()
@@ -598,6 +604,22 @@ class Sentry(ActionCard):
                 if len(player.lookat.cards) > 0:
                     last_card_name = player.lookat.cards[0].name
                     player._lookat_to_topdeck(last_card_name)
+
+class Witch(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Witch'
+        self.shorthand = 'wtch'
+        self.cost = 5
+        self.plus_card = 2
+        self.descr = "Each other player gains a curse."
+
+    def _play(self, player):
+        player._draw(2)
+        for opp in player.opponents:
+            if opp._check_card_gain('Curse'):
+                opp._gain('Curse')
+        self._resolve_play(player)
 
 class Artisan(ActionCard):
     def __init__(self):

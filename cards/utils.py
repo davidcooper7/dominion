@@ -1,5 +1,5 @@
 import sys, os
-from .basegame import Copper, Silver, Gold, Estate, Duchy, Province, Curse, Cellar, Chapel, Harbinger, Merchant, Vassal, Village, Workshop, Bureaucrat, Militia, Gardens, Moneylender, Poacher, Remodel, Smithy, ThroneRoom, Bandit, Festival, Laboratory, Library, Market, Mine, Sentry, Artisan
+from .basegame import Copper, Silver, Gold, Estate, Duchy, Province, Curse, Cellar, Chapel, Harbinger, Merchant, Vassal, Village, Workshop, Bureaucrat, Militia, Gardens, Moneylender, Poacher, Remodel, Smithy, ThroneRoom, Bandit, CouncilRoom, Festival, Laboratory, Library, Market, Mine, Sentry, Witch, Artisan
 
 def read_input(input, player):
     if input == 'Supply':
@@ -44,12 +44,14 @@ def convert_shorthand(sh):
         'smt': 'Smithy',
         'thr': 'Throne Room',
         'bnd': 'Bandit',
+        'crm': 'Council Room',
         'fst': 'Festival',
         'lab': 'Laboratory',
         'lib': 'Library',
         'mrk': 'Market',
         'min': 'Mine',
         'snt': 'Sentry',
+        'wtch': 'Witch',
         'art': 'Artisan'
     }
 
@@ -84,12 +86,14 @@ def get_card(card_name):
         'Smithy': Smithy(),
         'Throne Room': ThroneRoom(),
         'Bandit': Bandit(),
+        'Council Room': CouncilRoom(),
         'Festival': Festival(),
         'Laboratory': Laboratory(),
         'Library': Library(),
         'Market': Market(),
         'Mine': Mine(),
         'Sentry': Sentry(),
+        'Witch': Witch(),
         'Artisan': Artisan()
     }
     
