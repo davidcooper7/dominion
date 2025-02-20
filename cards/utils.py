@@ -1,5 +1,5 @@
 import sys, os
-from .basegame import Copper, Silver, Gold, Estate, Duchy, Province, Curse, Cellar, Chapel, Harbinger, Merchant, Vassal, Village, Workshop, Bureaucrat, Moneylender, Poacher, Remodel, Smithy, ThroneRoom, Festival, Laboratory, Library, Market, Mine, Sentry, Artisan
+from .basegame import Copper, Silver, Gold, Estate, Duchy, Province, Curse, Cellar, Chapel, Harbinger, Merchant, Vassal, Village, Workshop, Bureaucrat, Militia, Gardens, Moneylender, Poacher, Remodel, Smithy, ThroneRoom, Bandit, Festival, Laboratory, Library, Market, Mine, Sentry, Artisan
 
 def read_input(input, player):
     if input == 'Supply':
@@ -8,6 +8,14 @@ def read_input(input, player):
     elif input == 'Hand':
         player.hand._display()
         return read_input('', player)
+    elif '--help' in input:
+        try:
+            card_name = convert_shorthand(input.split()[0])
+            card = get_card(card_name)
+            print(card)
+            return convert_shorthand(input)
+        except:
+            return convert_shorthand(input)
     else:
         return convert_shorthand(input)
 
@@ -19,6 +27,7 @@ def convert_shorthand(sh):
         'e': 'Estate',
         'd': 'Duchy',
         'p': 'Province',
+        'grd': 'Gardens',
         'crs': 'Curse',
         'clr': 'Cellar',
         'chp': 'Chapel',
@@ -28,11 +37,13 @@ def convert_shorthand(sh):
         'vlg': 'Village',
         'wrk': 'Workshop',
         'brc': 'Bureaucrat',
+        'mlt': 'Militia',
         'mnl': 'Moneylender',
         'pch': 'Poacher',
         'rmd': 'Remodel',
         'smt': 'Smithy',
         'thr': 'Throne Room',
+        'bnd': 'Bandit',
         'fst': 'Festival',
         'lab': 'Laboratory',
         'lib': 'Library',
@@ -56,6 +67,7 @@ def get_card(card_name):
         'Estate': Estate(),
         'Duchy': Duchy(),
         'Province': Province(),
+        'Gardens': Gardens(),
         'Curse': Curse(),
         'Cellar': Cellar(),
         'Chapel': Chapel(),
@@ -65,11 +77,13 @@ def get_card(card_name):
         'Village': Village(),
         'Workshop': Workshop(),
         'Bureaucrat': Bureaucrat(),
+        'Militia': Militia(),
         'Moneylender': Moneylender(),
         'Poacher': Poacher(),
         'Remodel': Remodel(),
         'Smithy': Smithy(),
         'Throne Room': ThroneRoom(),
+        'Bandit': Bandit(),
         'Festival': Festival(),
         'Laboratory': Laboratory(),
         'Library': Library(),

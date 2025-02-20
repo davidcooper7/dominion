@@ -1,11 +1,4 @@
-Classes that need to be build
-- Game
-
-Functionality that needs to be built:
-- Pass and Play
-
 Cards that need to be implemented:
-- Bureaucrat
 - Gardens
 - Militia
 - Bandit
@@ -13,6 +6,7 @@ Cards that need to be implemented:
 - Witch
 
 Misc
+- Help for each card
 - Better gameplay log
 - Improved visual representation of cards
 - Test cases

@@ -41,32 +41,32 @@ class Deck():
         print(f'{self.name}:')
         print_cards_in_row(self.cards)
 
-    def _get_ncards(self):
+    def _count_ncards(self):
         return len(self.cards)
 
     def _count_victory_points(self):
-        points = 0
+        points = self._count_garden_points()
         for c in self.cards:
             points += c.points   
         return points
 
+    def _count_treasures(self):
+        count = 0
+        for c in self.cards:
+            if c.type == 'Treasure':
+                count += 1
+        return count
 
-class DrawPile(Deck):
-    def __init__(self):
-        super().__init__()
-        self.name = 'Draw'
-        
-        for i in range(7):
-            self.cards.append(Copper())
-        for i in range(3):
-            self.cards.append(Estate())
+    def _count_n_of_card(self, card_name):
+        count = 0
+        for c in self.cards:
+            if c.name == card_name:
+                count +=1
+        return count
 
+    def _count_garden_points(self):
+        return self._get_n_of_card('Gardens') * (self._get_ncards() // 10) * 10
 
-class Hand(Deck):
-    def __init__(self):
-        super().__init__()
-        self.name = 'Hand'
-        
     def _has_action(self):
         for c in self.cards:
             if c.type == 'Action':
@@ -88,11 +88,24 @@ class Hand(Deck):
     def _count_victory_point_cards(self):
         types = np.array([])
         for c in self.cards:
-            print(c.type)
             types = np.append(types, c.type)
-        print('!!!types', types)
         return len(np.where(types == 'Victory Point')[0])
+        
+class DrawPile(Deck):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Draw'
+        
+        for i in range(7):
+            self.cards.append(Copper())
+        for i in range(3):
+            self.cards.append(Estate())
 
+
+class Hand(Deck):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Hand'
 
 class InPlay(Deck):
     def __init__(self):
@@ -101,7 +114,6 @@ class InPlay(Deck):
 
     def _get_inplay(self):
         return [c.name for c in self.cards]
-
 
 class DiscardPile(Deck):
     def __init__(self):

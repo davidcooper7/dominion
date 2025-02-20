@@ -11,7 +11,7 @@ class Supply():
         starting_values = [
             ['c', 's', 'g', 'crs', 'e', 'd', 'p'],
             [60-n_players, 40, 30, self._get_n_curses(n_players), self._get_n_victory_points(n_players), \
-             self._get_n_victory_points(n_players), self._get_n_victory_points(n_players)],
+             self._get_n_victory_points(n_players), 1],
             [0, 3, 6, 0, 2, 5, 8],
         ]
         
@@ -20,6 +20,8 @@ class Supply():
         kingdom_card_names = list(np.array(kingdom_card_names)[np.argsort([get_card(name).cost for name in kingdom_card_names])])
         for name in kingdom_card_names:
             card = get_card(name)
+            if name == 'Gardens':
+                card.starting_qty = self._get_n_victory_points(n_players)
             self.supply[card.name] = [card.shorthand, card.starting_qty, card.cost]
 
 

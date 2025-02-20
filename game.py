@@ -14,8 +14,8 @@ class Game():
             if pack == 'basegame':
                 for name in ['Cellar', 'Chapel',  
                              'Harbinger', 'Merchant', 'Vassal', 'Village', 'Workshop',
-                             'Bureaucrat', 'Moneylender', 'Poacher', 'Remodel', 'Smithy', 'Throne Room',
-                             'Festival', 'Laboratory', 'Library', 'Market', 'Mine', 'Sentry', 'Artisan']:
+                             'Bureaucrat', 'Militia', 'Gardens', 'Moneylender', 'Poacher', 'Remodel', 'Smithy', 'Throne Room',
+                             'Bandit', 'Festival', 'Laboratory', 'Library', 'Market', 'Mine', 'Sentry', 'Artisan']:
                     card_pool.append(name)
 
         kingdom_cards = random.sample(card_pool, 10)
@@ -54,6 +54,8 @@ class Game():
             print(f'> {player} finishes with {points} victory points!')
             if points > most_points:
                 most_points = points
+                wining_players = [player.name]
+            elif points == most_points:
                 wining_players.append(player.name)
 
         print(f'> Players {wining_players} win with {most_points}!!!')

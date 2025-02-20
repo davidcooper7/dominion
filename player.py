@@ -93,7 +93,8 @@ class Player():
               USER CARD MOVEMENT
     """""""""""""""""""""""""""""""""
     def _user_discard(self, force=False):
-        if self.hand._get_ncards() == 0:
+        self.hand._display()
+        if self.hand._count_ncards() == 0:
             return False
         if force:
             choice = read_input(input(f'Which card would {self.name} like to discard? (card name)'), self)
@@ -108,22 +109,69 @@ class Player():
         else:
             return self._user_discard(force=force)
 
-    def _user_trash(self, force=False, return_cost=False):
+    def _user_trash(self, force=False, type='all', min_cost=0, return_cost=False):
         if force:
-            choice = read_input(input(f'Which card would {self.name} like to trash? (card name)'), self)
+            choice = read_input(input(f'Which card would {self.name} like to trash of type {type} and min. cost {min_cost}? (card name)'), self)
         else:
             choice = read_input(input(f'Would {self.name} like to trash a card? (card name or n/N)'), self)
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_hand(choice):
-            self._trash(choice)
-            self.hand._display()
-            if return_cost:
-                return get_card(choice).cost
+            card = get_card(choice)
+            if (type == 'all' or card.type == type):
+                if card.cost >= min_cost:
+                    self._trash(choice)
+                    self.hand._display()
+                    if return_cost:
+                        return get_card(choice).cost
+                    else:
+                        return True
+                else:
+                    print(f'Cannot trash {choice} with cost {card.cost} and min. cost {min_cost}')
+                    return self._user_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
             else:
-                return True
+                print(f'Cannot trash {choice} of type {card.type} and mandated type {type}')
+                return self._user_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
+                
         else:
-            return self._user_trash(force=force)
+            return self._user_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
+
+    def _user_lookat_to_trash(self, force=False, type='all', min_cost=0, return_cost=False):
+        self.lookat._display()
+        if force:
+            choice = read_input(input(f'Which card would {self.name} like to trash of type {type} and min. cost {min_cost}? (card name)'), self)
+        else:
+            choice = read_input(input(f'Would {self.name} like to trash a card? (card name or n/N)'), self)
+            if choice in ['n', 'N']:
+                return False
+        if self._check_card_in_lookat(choice):
+            card = get_card(choice)
+            if (type == 'all' or card.type == type):
+                if card.cost >= min_cost:
+                    self._lookat_to_trash(choice)
+                    if return_cost:
+                        return get_card(choice).cost
+                    else:
+                        return True
+                else:
+                    print(f'Cannot trash {choice} with cost {card.cost} and min. cost {min_cost}')
+                    return self._user_lookat_to_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
+            else:
+                print(f'Cannot trash {choice} of type {card.type} and mandated type {type}')
+                return self._user_lookat_to_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
+                
+        else:
+            return self._user_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
+
+    def _user_lookat_to_discard(self):
+        choice = ''
+        while choice not in ['n', 'N'] and self.lookat._count_ncards() > 0:
+            self.lookat._display()
+            choice = read_input(input(f'Would {self.name} like to discard a card? (card name or n/N)'), self)
+            if choice in ['n', 'N']:
+                break
+            elif self._check_card_in_lookat(choice):
+                self._lookat_to_discard(choice)
 
     def _user_gain(self, force=False, max_cost=0):
         self.supply._display()
@@ -164,8 +212,8 @@ class Player():
                 print(f'> {self.name} draws a {self.draw.cards[0].name}')
                 self.draw.cards.pop(0)
         else:
-            self._discard_to_draw()
-            self._draw(ncards)
+            if self._discard_to_draw():
+                self._draw(ncards)
     
     def _gain(self, card_name):
         print(f'> {self.name} gains a {card_name}')
@@ -192,10 +240,15 @@ class Player():
 
     def _discard_to_draw(self):
         self.discard._shuffle()
-        print(f'> {self.name} shuffles')
-        for card in self.discard.cards:
-            self.draw._add_card(card.name)
-        self.discard._empty()
+        if self.discard._count_ncards() == 0:
+            print(f'No cards in discard...')
+            return False
+        else:
+            print(f'> {self.name} shuffles')
+            for card in self.discard.cards:
+                self.draw._add_card(card.name)
+            self.discard._empty()
+            return True
 
     def _put_inplay(self, card_name):
         print(f'> {self.name} plays a {card_name}')
@@ -213,13 +266,13 @@ class Player():
 
     def _lookat_draw_top(self, ncards=1):
         self.lookat = LookAt()
-        if self.draw._get_ncards() >= ncards:
+        if self.draw._count_ncards() >= ncards:
             for i in range(ncards):
                 self.lookat._add_card(self.draw.cards[0].name)
                 self.draw._remove_top()
         else:
-            self._discard_to_draw()
-            self._lookat_draw_top(ncards=ncards)
+            if self._discard_to_draw():
+                self._lookat_draw_top(ncards=ncards)
 
         print(f'> {self.name} looks at {self.lookat}')
 
@@ -259,6 +312,14 @@ class Player():
             self.deck._add_card(card_name)
         for card_name in self.discard._get_names():
             self.deck._add_card(card_name)
+
+        for card_name in ['Estate', 'Duchy', 'Province', 'Gardens', 'Curse']:
+            count = self.deck._count_n_of_card(card_name)
+            card = get_card(card_name)
+            if card_name == 'Gardens':
+                print(f'> {self.name} had {count} {card_name}s for {self.deck._count_garden_points()} points')
+            else:
+                print(f'> {self.name} had {count} {card_name}s for {count * card.points} points')
 
         return self.deck._count_victory_points()
 

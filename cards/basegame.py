@@ -91,6 +91,15 @@ class Province(VictoryPointCard):
         self.cost = 8
         self.points = 6
 
+class Gardens(VictoryPointCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Gardens'
+        self.shorthand = 'grd'
+        self.cost = 4
+        self.points = 0
+        self.starting_qty = 0
+
 class Curse():
     def __init__(self):
         super().__init__()
@@ -121,6 +130,20 @@ class ActionCard(Card):
         self.value_str = 0
         self.points = 0
         self.descr = ''
+
+    def __str__(self):
+        return '\n'.join(['', 
+                          'CARD HELP',
+                          '---------',
+                          f'Name: {self.name}', 
+                          f'Type: {self.type}', 
+                          f'Plus Action: {self.plus_action}', 
+                          f'Plus Card: {self.plus_card}',
+                          f'Plus Buy: {self.plus_buy}',
+                          f'Value: {self.value_str}',
+                          self.descr,
+                         ''])
+
 
     def _resolve_play(self, player):
         player.turn.actions += self.plus_action
@@ -154,7 +177,7 @@ class Chapel(ActionCard):
     def _play(self, player):
         player.hand._display()
         trashed = 0
-        while trashed < 4 and player._user_trash() and player.hand._get_ncards() > 0:
+        while trashed < 4 and player._user_trash() and player.hand._count_ncards() > 0:
             trashed += 1
 
 class Harbinger(ActionCard):
@@ -218,19 +241,20 @@ class Vassal(ActionCard):
         from .utils import read_input
         self.value = 2
         player._lookat_draw_top()
-        top_card = player.lookat.cards[0]
-        if top_card.type == 'Action':
-            choice_selected = False
-            while not choice_selected:
-                choice = read_input(input(f'Would {player.name} like to play it? (Y/y or N/n)'), player)
-                if choice in ['N', 'n']:
-                    choice_selected = True
-                elif choice in ['Y', 'y']:
-                    player._lookat_to_inplay(top_card.name)
-                    top_card._play(player)
-                    choice_selected = True   
-        else:
-            player._lookat_to_discard(top_card.name)
+        if len(player.lookat.cards) > 0:
+            top_card = player.lookat.cards[0]
+            if top_card.type == 'Action':
+                choice_selected = False
+                while not choice_selected:
+                    choice = read_input(input(f'Would {player.name} like to play it? (Y/y or N/n)'), player)
+                    if choice in ['N', 'n']:
+                        choice_selected = True
+                    elif choice in ['Y', 'y']:
+                        player._lookat_to_inplay(top_card.name)
+                        top_card._play(player)
+                        choice_selected = True   
+            else:
+                player._lookat_to_discard(top_card.name)
         self._resolve_play(player)
     
 class Village(ActionCard):
@@ -282,7 +306,22 @@ class Bureaucrat(ActionCard):
                     opp._user_hand_to_topdeck(force=True, type='Victory Point')
             else:
                 print(f'{opp.name} reveals {opp.hand} with no Victory Points')
-        
+
+class Militia(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Militia'
+        self.shorthand = 'mlt'
+        self.cost = 4
+        self.value_str = 2
+        self.descr = 'Each other player discards down to 3 cards in hand.'
+
+    def _play(self, player):
+        self.value = 2
+        for opp in player.opponents:
+            while opp.hand._count_ncards() > 3:
+                opp._user_discard(force=True)
+        self._resolve_play(player)
 
 class Moneylender(ActionCard):
     def __init__(self):
@@ -329,7 +368,7 @@ class Remodel(ActionCard):
         self.descr = "Trash a card from your hand. Gain a card costing up to +2 more than it."
 
     def _play(self, player):
-        if player.hand._get_ncards() > 0:
+        if player.hand._count_ncards() > 0:
             trashed_cost = player._user_trash(force=True, return_cost=True)
             player._user_gain(force=True, max_cost=trashed_cost + 2)
         self._resolve_play(player)
@@ -372,6 +411,53 @@ class ThroneRoom(ActionCard):
                 else:
                     self._play(player)
 
+class Bandit(ActionCard):
+    def __init__(self):
+        super().__init__()
+        self.name = 'Bandit'
+        self.shorthand = 'bnd'
+        self.cost = 5
+        self.descr = 'Gain a Gold. Each other player reveals thoe top 2 cards of their deck, trashes a revealed Treasure other than Copper, and discards the rest.'
+
+    def _play(self, player):
+        if player._check_card_gain('Gold'):
+            player._gain('Gold')
+        for opp in player.opponents:
+            opp._lookat_draw_top(2)
+            if opp.lookat._has_treasure():
+                if opp.lookat._count_treasures() > 1:
+                    if opp.lookat._count_n_of_card('Copper') == 0:
+                        if opp.lookat._count_n_of_card('Silver') == 2:
+                            opp._lookat_to_trash('Silver')
+                            opp._lookat_to_discard('Silver')
+                        elif opp.lookat._count_n_of_card('Gold') == 2:
+                            opp._lookat_to_trash('Gold')
+                            opp._lookat_to_discard('Gold')
+                        else:   
+                            opp._user_lookat_to_trash(force=True, type='Treasure', min_cost=3)
+                            card = opp.lookat.cards[0]
+                            opp._lookat_to_discard(card.name)
+                    elif opp.lookat._count_n_of_card('Copper') == 1:
+                        opp._lookat_to_discard('Copper')
+                        card = opp.lookat.cards[0]
+                        opp._lookat_to_trash(card.name)
+                    else:
+                        opp._lookat_to_discard('Copper')
+                        opp._lookat_to_discard('Copper')
+                else:
+                    if opp.lookat._count_n_of_card('Copper') == 1:
+                        opp._lookat_to_discard('Copper')
+                    elif opp.lookat._count_n_of_card('Silver') == 1:
+                        opp._lookat_to_trash('Silver')
+                    elif opp.lookat._count_n_of_card('Gold') == 1:
+                        opp._lookat_to_trash('Gold')
+                    card = opp.lookat.cards[0]
+                    opp._lookat_to_discard(card.name)
+            else:
+                while opp.lookat._count_ncards() > 0:
+                    opp._lookat_to_discard(opp.lookat.cards[0].name)
+        self._resolve_play(player)
+
 class Festival(ActionCard):
     def __init__(self):
         super().__init__()
@@ -408,20 +494,21 @@ class Library(ActionCard):
         self.descr = "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterwards."
 
     def _play(self, player):
-        while player.hand._get_ncards() < 7:
+        while player.hand._count_ncards() < 7:
             player._lookat_draw_top()
-            draw_card = player.lookat.cards[0]
-            if draw_card.type == 'Action':
-                choice_selected = False
-                while not choice_selected:
-                    player.hand._display()
-                    choice = input(f'{player.name} drew a {draw_card}, would {player.name} like to keep it? (Y/y or N/n)')
-                    if choice in ['n', 'N', 'y', 'Y']:
-                        if choice in ['n', 'N']:
-                            player._lookat_to_discard(draw_card.name)
-                        elif choice in ['y', 'Y']:
-                            player._lookat_to_hand(draw_card.name)
-                        choice_selected = True
+            if len(player.lookat.cards) > 0:
+                draw_card = player.lookat.cards[0]
+                if draw_card.type == 'Action':
+                    choice_selected = False
+                    while not choice_selected:
+                        player.hand._display()
+                        choice = input(f'{player.name} drew a {draw_card.name}, would {player.name} like to keep it? (Y/y or N/n)')
+                        if choice in ['n', 'N', 'y', 'Y']:
+                            if choice in ['n', 'N']:
+                                player._lookat_to_discard(draw_card.name)
+                            elif choice in ['y', 'Y']:
+                                player._lookat_to_hand(draw_card.name)
+                            choice_selected = True
             else:
                 player._lookat_to_hand(draw_card.name)
                 player.hand._display()
@@ -491,47 +578,26 @@ class Sentry(ActionCard):
     def _play(self, player):
         player._draw(1)
         player._lookat_draw_top(2)
-        self._user_trash(player)
-        if player.lookat._get_ncards() > 0:
-            self._user_discard(player)
-        if player.lookat._get_ncards() > 0:
-            if player.lookat._get_ncards() > 1:
+        player._user_lookat_to_trash()
+        if player.lookat._count_ncards() > 0:
+            player._user_lookat_to_discard()
+        if player.lookat._count_ncards() > 0:
+            if player.lookat._count_ncards() > 1:
                 self._user_order(player)
             else:
                 player._lookat_to_topdeck(player.lookat.cards[0].name)
         self._resolve_play(player)
 
-    def _user_trash(self, player):
-        from .utils import read_input
-        choice = ''
-        while choice not in ['n', 'N'] and player.lookat._get_ncards() > 0:
-            player.lookat._display()
-            choice = read_input(input(f'Would {player.name} like to trash a card? (card name or n/N)'), player)
-            if choice in ['n', 'N']:
-                break
-            if player._check_card_in_lookat(choice):
-                player._lookat_to_trash(choice)
-                
-    def _user_discard(self, player):
-        from .utils import read_input
-        choice = ''
-        while choice not in ['n', 'N'] and player.lookat._get_ncards() > 0:
-            player.lookat._display()
-            choice = read_input(input(f'Would {player.name} like to discard a card? (card name or n/N)'), player)
-            if choice in ['n', 'N']:
-                break
-            elif player._check_card_in_lookat(choice):
-                player._lookat_to_discard(choice)
-
     def _user_order(self, player):
         from .utils import read_input
-        while player.lookat._get_ncards() > 0:
+        while player.lookat._count_ncards() > 0:
             player.lookat._display()
             choice = read_input(input(f'Which card {player.name} like to put on top of draw pile first? (card name)'), player)
             if player._check_card_in_lookat(choice):
                 player._lookat_to_topdeck(choice)
-                last_card_name = player.lookat.cards[0].name
-                player._lookat_to_topdeck(last_card_name)
+                if len(player.lookat.cards) > 0:
+                    last_card_name = player.lookat.cards[0].name
+                    player._lookat_to_topdeck(last_card_name)
 
 class Artisan(ActionCard):
     def __init__(self):
@@ -543,7 +609,7 @@ class Artisan(ActionCard):
 
     def _play(self, player):
         self._gain(player)
-        self._topdeck(player)
+        player._user_hand_to_topdeck(force=True)
 
     def _gain(self, player):
         from .utils import read_input
@@ -555,12 +621,4 @@ class Artisan(ActionCard):
                 player._gain_to_hand(choice)   
                 choice_selected = True
 
-    def _topdeck(self, player):
-        from .utils import read_input
-        choice_selected = False
-        while not choice_selected:
-            player.hand._display()
-            choice = read_input(input(f'Which card would {player.name} like to topdeck? (card name)'), player)
-            if player._check_card_in_hand(choice):
-                player._hand_to_topdeck(choice)
-                choice_selected = True
+
