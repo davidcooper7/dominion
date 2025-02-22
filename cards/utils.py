@@ -1,18 +1,31 @@
-import sys, os
-from .basegame import Copper, Silver, Gold, Estate, Duchy, Province, Curse, Cellar, Chapel, Harbinger, Merchant, Vassal, Village, Workshop, Bureaucrat, Militia, Gardens, Moneylender, Poacher, Remodel, Smithy, ThroneRoom, Bandit, CouncilRoom, Festival, Laboratory, Library, Market, Mine, Sentry, Witch, Artisan
+import sys, os, time
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append('..')
+from basegame import Copper, Silver, Gold, Estate, Duchy, Province, Curse, Cellar, Chapel, Harbinger, Merchant, Vassal, Village, Workshop, Bureaucrat, Militia, Gardens, Moneylender, Poacher, Remodel, Smithy, ThroneRoom, Bandit, CouncilRoom, Festival, Laboratory, Library, Market, Mine, Sentry, Witch, Artisan
 
 def read_input(input, player):
     if input == 'Supply':
-        player.supply._display()
+        if hasattr(player, 'conn'):
+            player.supply._display(conn=player.conn)
+        else:
+            player.supply._display()
         return read_input('', player)
     elif input == 'Hand':
-        player.hand._display()
+        if hasattr(player, 'conn'):
+            player.hand._display(conn=player.conn)
+        else:
+            player.hand._display()
         return read_input('', player)
     elif '--help' in input:
         try:
             card_name = convert_shorthand(input.split()[0])
             card = get_card(card_name)
-            print(card)
+            if hasattr(player, 'conn'):
+                msg = card.__str__() + '_n'
+                player.conn.sendall(msg.encode())
+                time.sleep(0.01)
+            else:
+                print(card)
             return convert_shorthand(input)
         except:
             return convert_shorthand(input)
@@ -140,7 +153,7 @@ def chunk_list(lst, chunk_size):
     for i in range(0, len(lst), chunk_size):
         yield lst[i:i + chunk_size]
 
-def print_cards_in_row(card_objs, max_cards_per_row=9):
+def print_cards_in_row(card_objs, max_cards_per_row=9, conn=None):
     """
     Prints cards, splitting into multiple rows if necessary.
     max_cards_per_row defines how many cards to display per row.
@@ -157,5 +170,15 @@ def print_cards_in_row(card_objs, max_cards_per_row=9):
 
         # Combine cards line by line
         for i in range(len(cards[0])):  # Loop through each "row" of the cards
-            print("  ".join(card[i] for card in cards))  # Join corresponding rows
-        print()  # Print an empty line between rows of cards
+            if conn is None:
+                print("  ".join(card[i] for card in cards))  # Join corresponding rows
+            else:
+                msg = "  ".join(card[i] for card in cards) + "_n"
+                conn.sendall(msg.encode())
+                time.sleep(0.01)
+        if conn is None:
+            print()  # Print an empty line between rows of cards
+        else:
+            msg = '_n' 
+            conn.sendall(msg.encode())
+            time.sleep(0.01)

@@ -1,4 +1,5 @@
 import sys, os
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
            
 class Card():
     def __str__(self):
@@ -181,24 +182,9 @@ class Harbinger(ActionCard):
         self.descr = 'Look through your discard pile. You may put a card from it onto your deck.'   
 
     def _play(self, player):
-        from .utils import read_input
+        from utils import read_input
         player._draw(self.plus_card)
-        player.hand._display()
-        if len(player.discard.cards) > 0:
-            player.discard._display()
-            choice_selected = False
-            while not choice_selected:
-                choice = read_input(input('Would you like to put a discarded card onto your deck? (card name or N/n)'), player)
-                if choice not in ['N', 'n']:
-                    if player._check_card_in_discard(choice):
-                        player.discard._remove_card(choice)
-                        player.draw._topdeck_card(choice)
-                        print(f'{player.name} topdecks a {choice}')
-                        choice_selected = True
-                else:
-                    choice_selected = True
-        else:
-            print('There are no cards in the discard :(')
+        player._user_discard_to_topdeck()        
         self._resolve_play(player)
 
 class Merchant(ActionCard):
@@ -228,7 +214,7 @@ class Vassal(ActionCard):
         self.descr = "Discard the top card of your deck. If it's an Action card, you may play it?"
 
     def _play(self, player):
-        from .utils import read_input
+        from utils import read_input
         self.value = 2
         player._lookat_draw_top()
         if len(player.lookat.cards) > 0:
@@ -236,7 +222,7 @@ class Vassal(ActionCard):
             if top_card.type == 'Action':
                 choice_selected = False
                 while not choice_selected:
-                    choice = read_input(input(f'Would {player.name} like to play it? (Y/y or N/n)'), player)
+                    choice = player._send_recv(f'Would {player.name} like to play it? (Y/y or N/n)')
                     if choice in ['N', 'n']:
                         choice_selected = True
                     elif choice in ['Y', 'y']:
@@ -295,7 +281,7 @@ class Bureaucrat(ActionCard):
                 else:
                     opp._user_hand_to_topdeck(force=True, type='Victory Point')
             else:
-                print(f'{opp.name} reveals {opp.hand} with no Victory Points')
+                player._send_to_all(f'{opp.name} reveals {opp.hand} with no Victory Points')
 
 class Militia(ActionCard):
     def __init__(self):
@@ -344,7 +330,7 @@ class Poacher(ActionCard):
         self.value = 1
         n_empties = player.supply._count_empty()
         if n_empties > 0:
-            print(f'There are {n_empties} Supply piles empty. You must discard {n_empties} cards.')
+            player._send_to_self(f'There are {n_empties} Supply piles empty. You must discard {n_empties} cards.')
         for i in range(n_empties):
             player._user_discard(force=True)
         self._resolve_play(player)
@@ -384,10 +370,10 @@ class ThroneRoom(ActionCard):
         self.descr = 'You may play an Action card from your hand twice'
 
     def _play(self, player):
-        from .utils import read_input, get_card
+        from utils import read_input, get_card
         if player.hand._has_action():
             player.hand._display()
-            choice = read_input(input(f'Would you like to Throne Room an action? (card name or N/n)'), player)
+            choice = player._send_recv(f'Would you like to Throne Room an action? (card name or N/n)')
             if choice not in ['N', 'n']:
                 if player._check_card_in_hand(choice) and player._check_card_is_action(choice):
                     if choice != 'Throne Room':
@@ -396,7 +382,7 @@ class ThroneRoom(ActionCard):
                         card._play(player)
                         card._play(player)
                     else:
-                        print('Cannot Throne Room a Throne Room!')
+                        self._send_to_self('Cannot Throne Room a Throne Room!')
                         self._play(player)
                 else:
                     self._play(player)
@@ -508,7 +494,7 @@ class Library(ActionCard):
                     choice_selected = False
                     while not choice_selected:
                         player.hand._display()
-                        choice = input(f'{player.name} drew a {draw_card.name}, would {player.name} like to keep it? (Y/y or N/n)')
+                        choice = self._send_recv(f'{player.name} drew a {draw_card.name}, would {player.name} like to keep it? (Y/y or N/n)')
                         if choice in ['n', 'N', 'y', 'Y']:
                             if choice in ['n', 'N']:
                                 player._lookat_to_discard(draw_card.name)
@@ -544,10 +530,10 @@ class Mine(ActionCard):
         self.descr = "You may trash a Treasure from your hand. Gain a Treasure to your hand costing up to +3 more than it."
         
     def _play(self, player):
-        from .utils import read_input, get_card
+        from utils import get_card
         if player.hand._has_treasure():
             choice_selected = False
-            choice = read_input(input(f'Would {player.name} like to trash a Treasure for a Treasure +3? (card name or n/N)'), player)
+            choice = player._send_recv(f'Would {player.name} like to trash a Treasure for a Treasure +3? (card name or n/N)')
             if choice not in ['N', 'n']:
                 if player._check_card_in_hand(choice) and player._check_card_is_treasure(choice):
                     card = get_card(choice)
@@ -559,14 +545,14 @@ class Mine(ActionCard):
         self._resolve_play(player)
 
     def _user_gain_treasure(self, player, max_cost):
-        from .utils import read_input, get_card
-        choice2 = read_input(input(f'Which Treasure would {player.name} like to gain up to {max_cost}? (card name)'), player) 
+        from utils import read_input, get_card
+        choice2 = player._send_recv(f'Which Treasure would {player.name} like to gain up to {max_cost}? (card name)')
         if player._check_card_gain(choice2) and player._check_card_is_treasure(choice2):
             card = get_card(choice2)
             if card.cost <= max_cost:
                 player._gain(choice2)
             else:
-                print(f'Cannot gain {choice2} with max. cost of {max_cost}.')
+                player._send_to_self(f'Cannot gain {choice2} with max. cost of {max_cost}.')
                 self._user_gain_treasure(player, max_cost)
         else:
             self._user_gain_treasure(player, max_cost)
@@ -595,10 +581,10 @@ class Sentry(ActionCard):
         self._resolve_play(player)
 
     def _user_order(self, player):
-        from .utils import read_input
+        from utils import read_input
         while player.lookat._count_ncards() > 0:
             player.lookat._display()
-            choice = read_input(input(f'Which card {player.name} like to put on top of draw pile first? (card name)'), player)
+            choice = player._send_recv(f'Which card {player.name} like to put on top of draw pile first? (card name)')
             if player._check_card_in_lookat(choice):
                 player._lookat_to_topdeck(choice)
                 if len(player.lookat.cards) > 0:
@@ -634,11 +620,11 @@ class Artisan(ActionCard):
         player._user_hand_to_topdeck(force=True)
 
     def _gain(self, player):
-        from .utils import read_input
+        from utils import read_input
         choice_selected = False
         while not choice_selected:
             player.supply._display()
-            choice = read_input(input(f'Which card would {player.name} like to gain for up to 5? (card name)'), player)
+            choice = player._send_recv(f'Which card would {player.name} like to gain for up to 5? (card name)')
             if player._check_card_gain(choice, max_cost=5):
                 player._gain_to_hand(choice)   
                 choice_selected = True

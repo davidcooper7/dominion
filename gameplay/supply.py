@@ -1,3 +1,6 @@
+import sys, os, time
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append('..')
 import numpy as np
 import pandas as pd
 pd.set_option('display.width', 100)
@@ -11,7 +14,7 @@ class Supply():
         starting_values = [
             ['c', 's', 'g', 'crs', 'e', 'd', 'p'],
             [60-n_players, 40, 30, self._get_n_curses(n_players), self._get_n_victory_points(n_players), \
-             self._get_n_victory_points(n_players), 1],
+             self._get_n_victory_points(n_players), self._get_n_victory_points(n_players)],
             [0, 3, 6, 0, 2, 5, 8],
         ]
         
@@ -39,9 +42,14 @@ class Supply():
         else:
             return 12
 
-    def _display(self):
-        display(self.supply)
-
+    def _display(self, conn=None):
+        if conn is None:
+            print(self.supply)
+        else:
+            msg = self.supply.to_string() + '_n'
+            conn.sendall(msg.encode())
+            time.sleep(0.1)
+    
     def _get_card_names(self):
         return self.supply.columns.to_list()
 

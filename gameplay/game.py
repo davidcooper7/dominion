@@ -1,10 +1,12 @@
-import sys, inspect, random
+import sys, inspect, random, os
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 from supply import Supply
+import numpy as np
 
 
 class Game():
     def __init__(self, players, packs=['basegame']):
-        self.players = players
+        self.players = players 
         self._set_supply(packs)
         self._add_opponents_to_player()
     

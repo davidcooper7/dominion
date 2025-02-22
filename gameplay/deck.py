@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+sys.path.append('..')
 from cards.utils import *
 from random import shuffle
 import numpy as np
@@ -37,9 +40,9 @@ class Deck():
     def __repr__(self):
         return f'{[c.name for c in self.cards]}'
 
-    def _display(self):
+    def _display(self, conn=None):
         print(f'{self.name}:')
-        print_cards_in_row(self.cards)
+        print_cards_in_row(self.cards, conn=conn)
 
     def _count_ncards(self):
         return len(self.cards)
@@ -65,7 +68,7 @@ class Deck():
         return count
 
     def _count_garden_points(self):
-        return self._get_n_of_card('Gardens') * (self._get_ncards() // 10) * 10
+        return self._count_n_of_card('Gardens') * (self._count_ncards() // 10) * 10
 
     def _has_action(self):
         for c in self.cards:
