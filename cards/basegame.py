@@ -551,7 +551,7 @@ class Mine(ActionCard):
         if player._check_card_gain(choice2) and player._check_card_is_treasure(choice2):
             card = get_card(choice2)
             if card.cost <= max_cost:
-                player._gain(choice2)
+                player._gain_to_hand(choice2)
             else:
                 player._send_to_self(f'Cannot gain {choice2} with max. cost of {max_cost}.')
                 self._user_gain_treasure(player, max_cost)
