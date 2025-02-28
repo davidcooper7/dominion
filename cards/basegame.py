@@ -155,6 +155,7 @@ class Cellar(ActionCard):
         while player._user_discard():
             self.plus_card += 1
         player._draw(self.plus_card)
+        self.plus_card = 0
         self._resolve_play(player)
 
 class Chapel(ActionCard):
