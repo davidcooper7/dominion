@@ -25,7 +25,6 @@ class Game():
                              'Artisan']:
                     card_pool.append(name)
 
-        print(card_pool)
         kingdom_cards = random.sample(card_pool, 10)
 
         self.supply = Supply(len(self.players), kingdom_cards)

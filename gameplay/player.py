@@ -108,7 +108,6 @@ class Player():
                                                             f'\t{self.turn.value} value in-play', 
                                                             f'What action would {self.name} like to play? (card name or N/n)'])
                 choice = self._send_recv(msg)
-                print('choice', choice)
                 if choice not in ['n', 'N']:
                     if self._check_card_in_hand(choice) and self._check_card_is_action(choice):
                         card = get_card(choice)
@@ -129,7 +128,6 @@ class Player():
             self.hand._display(conn=self.conn)
             msg = f'{self.name} have {self.turn.value} to spend on {self.turn.buys} buys. What would {self.name} like to buy? (card name or N/n)'
             choice = self._send_recv(msg)
-            print('choice', choice)
             if choice not in ['n', 'N']:
                 if self._check_card_buy(choice):
                     self._gain(choice)
