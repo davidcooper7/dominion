@@ -7,5 +7,5 @@ if __name__ == '__main__':
     name = input('What would you like your name to be? ')
 
     # Set client
-    PORT = 3666
+    PORT = 3668
     client = Client(PORT, name)

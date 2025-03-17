@@ -5,10 +5,14 @@ import numpy as np
 
 
 class Game():
-    def __init__(self, players, packs=['basegame']):
+    def __init__(self, players, packs=['basegame'], server=None):
         self.players = players 
         self._set_supply(packs)
         self._add_opponents_to_player()
+        self.server = server
+
+    def close(self):
+        self.server.close()
     
     def _set_supply(self, packs):
         card_pool = []
@@ -21,6 +25,7 @@ class Game():
                              'Artisan']:
                     card_pool.append(name)
 
+        print(card_pool)
         kingdom_cards = random.sample(card_pool, 10)
 
         self.supply = Supply(len(self.players), kingdom_cards)
@@ -34,10 +39,12 @@ class Game():
     def play(self):
         while not self._eval_winning_criterion():
             for player in self.players:
-                print(f"\n***************It is {player.name}'s turn***************\n")
+                player._send_to_all(f"\n***************It is {player.name}'s turn***************\n")
                 player.take_turn(self.supply)
                 if self._eval_winning_criterion():
                     break
+            if self._eval_winning_criterion():
+                break
 
         self._eval_win()
 
@@ -54,14 +61,14 @@ class Game():
         wining_players = []
         for player in self.players:
             points = player._finish()
-            print(f'> {player} finishes with {points} victory points!')
+            player._send_to_all(f'> {player} finishes with {points} victory points!')
             if points > most_points:
                 most_points = points
                 wining_players = [player.name]
             elif points == most_points:
                 wining_players.append(player.name)
 
-        print(f'> Players {wining_players} win with {most_points}!!!')
+        self.players[0]._send_to_all(f'> Players {wining_players} win with {most_points}!!!')
             
                 
     

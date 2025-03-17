@@ -14,8 +14,9 @@ class Player():
               INIT PLAYER
     """""""""""""""""""""""""""""""""
     
-    def __init__(self, name: str):
+    def __init__(self, name: str, conn=None):
         self.name = name
+        self.conn = conn
         self._init_deck()
         self.opponents = []
 
@@ -37,6 +38,53 @@ class Player():
     def __repr__(self):
         return self.name
 
+
+    """""""""""""""""""""""""""""""""
+           COMMUNICATION METHODS
+    """""""""""""""""""""""""""""""""
+
+    def _send_recv(self, send_msg):
+        if self.conn is not None:
+            send_msg = send_msg + '_y'
+            self.conn.sendall(send_msg.encode())
+            print('sent', send_msg)
+            while True:
+                data = self.conn.recv(1024)
+                if not data:
+                    break
+                recv_msg = data.decode()
+                print('received', recv_msg)
+                return read_input(recv_msg, self)
+        else:
+            return read_input(input(send_msg), self)
+
+    def _send_to_all(self, to_self, to_opponents=None):
+        if self.conn is not None:
+            to_self = to_self + '_n'
+            if to_opponents is None:
+                to_opponents = to_self
+            else:
+                to_opponents = to_opponents + '_n'
+            print('to_self', to_self)
+            print('to_opponents', to_opponents)
+            self.conn.sendall(to_self.encode())
+            time.sleep(0.01)
+            if hasattr(self, 'opponents'):
+                for opp in self.opponents:
+                    if hasattr(opp, 'conn'):
+                        opp.conn.sendall(to_opponents.encode())
+                        time.sleep(0.01)
+        else:
+            print(to_self)
+
+    def _send_to_self(self, to_self):
+        if self.conn is not None:
+            to_self = to_self + '_n'
+            self.conn.sendall(to_self.encode())
+            time.sleep(0.01)
+        else:
+            print(to_self)
+
     """""""""""""""""""""""""""""""""
                TURN ACTIONS
     """""""""""""""""""""""""""""""""
@@ -53,12 +101,14 @@ class Player():
     def _play_actions(self):
         if self.hand._has_action():
             while self.turn.actions > 0 and self.hand._has_action():
-                self.hand._display()
-                choice = read_input(input('\n'.join([f'{self.name} has {self.inplay._get_inplay()} in-play with:',
+                self.hand._display(conn=self.conn)
+                msg = '\n'.join([f'{self.name} has {self.inplay._get_inplay()} in-play with:',
                                                             f'\t{self.turn.actions} actions remaining', 
                                                             f'\t{self.turn.buys} buys remaining',
                                                             f'\t{self.turn.value} value in-play', 
-                                                            f'What action would {self.name} like to play? (card name or N/n)'])), self)
+                                                            f'What action would {self.name} like to play? (card name or N/n)'])
+                choice = self._send_recv(msg)
+                print('choice', choice)
                 if choice not in ['n', 'N']:
                     if self._check_card_in_hand(choice) and self._check_card_is_action(choice):
                         card = get_card(choice)
@@ -68,16 +118,18 @@ class Player():
                 else:
                     break   
         else:
-            print('No Action Cards.')
+            self._send_to_self('No Action Cards.')
 
     def _buy_cards(self):
         self.turn.value += self.hand._get_value()
-        self.supply._display()
+        self.supply._display(conn=self.conn)
 
         choice = None
         while self.turn.buys > 0:
-            self.hand._display()
-            choice = read_input(input(f'{self.name} have {self.turn.value} to spend on {self.turn.buys} buys. What would {self.name} like to buy? (card name or N/n)'), self)
+            self.hand._display(conn=self.conn)
+            msg = f'{self.name} have {self.turn.value} to spend on {self.turn.buys} buys. What would {self.name} like to buy? (card name or N/n)'
+            choice = self._send_recv(msg)
+            print('choice', choice)
             if choice not in ['n', 'N']:
                 if self._check_card_buy(choice):
                     self._gain(choice)
@@ -96,27 +148,29 @@ class Player():
               USER CARD MOVEMENT
     """""""""""""""""""""""""""""""""
     def _user_discard(self, force=False):
-        self.hand._display()
+        self.hand._display(conn=self.conn)
         if self.hand._count_ncards() == 0:
             return False
         if force:
-            choice = read_input(input(f'Which card would {self.name} like to discard? (card name)'), self)
+            send_msg = f'Which card would {self.name} like to discard? (card name)'
+            choice = self._send_recv(send_msg)
         else:
-            choice = read_input(input(f'Would {self.name} like to discard a card? (card name or n/N)'), self)
+            send_msg = f'Would {self.name} like to discard a card? (card name or n/N)'
+            choice = self._send_recv(send_msg)
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_hand(choice):
             self._discard(choice)
-            self.hand._display()
+            self.hand._display(conn=self.conn)
             return True
         else:
             return self._user_discard(force=force)
 
     def _user_trash(self, force=False, type='all', min_cost=0, return_cost=False):
         if force:
-            choice = read_input(input(f'Which card would {self.name} like to trash of type {type} and min. cost {min_cost}? (card name)'), self)
+            choice = self._send_recv(f'Which card would {self.name} like to trash of type {type} and min. cost {min_cost}? (card name)')
         else:
-            choice = read_input(input(f'Would {self.name} like to trash a card? (card name or n/N)'), self)
+            choice = self._send_recv(f'Would {self.name} like to trash a card? (card name or n/N)')
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_hand(choice):
@@ -124,27 +178,27 @@ class Player():
             if (type == 'all' or card.type == type):
                 if card.cost >= min_cost:
                     self._trash(choice)
-                    self.hand._display()
+                    self.hand._display(conn=self.conn)
                     if return_cost:
                         return get_card(choice).cost
                     else:
                         return True
                 else:
-                    print(f'Cannot trash {choice} with cost {card.cost} and min. cost {min_cost}')
+                    self._send_to_self(f'Cannot trash {choice} with cost {card.cost} and min. cost {min_cost}')
                     return self._user_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
             else:
-                print(f'Cannot trash {choice} of type {card.type} and mandated type {type}')
+                self._send_to_self(f'Cannot trash {choice} of type {card.type} and mandated type {type}')
                 return self._user_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
                 
         else:
             return self._user_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
 
     def _user_lookat_to_trash(self, force=False, type='all', min_cost=0, return_cost=False):
-        self.lookat._display()
+        self.lookat._display(conn=self.conn)
         if force:
-            choice = read_input(input(f'Which card would {self.name} like to trash of type {type} and min. cost {min_cost}? (card name)'), self)
+            choice = self._send_recv(f'Which card would {self.name} like to trash of type {type} and min. cost {min_cost}? (card name)')
         else:
-            choice = read_input(input(f'Would {self.name} like to trash a card? (card name or n/N)'), self)
+            choice = self._send_recv(f'Would {self.name} like to trash a card? (card name or n/N)')
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_lookat(choice):
@@ -157,10 +211,10 @@ class Player():
                     else:
                         return True
                 else:
-                    print(f'Cannot trash {choice} with cost {card.cost} and min. cost {min_cost}')
+                    self._send_to_self(f'Cannot trash {choice} with cost {card.cost} and min. cost {min_cost}')
                     return self._user_lookat_to_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
             else:
-                print(f'Cannot trash {choice} of type {card.type} and mandated type {type}')
+                self._send_to_self(f'Cannot trash {choice} of type {card.type} and mandated type {type}')
                 return self._user_lookat_to_trash(force=force, type=type, min_cost=min_cost, return_cost=return_cost)
                 
         else:
@@ -169,19 +223,19 @@ class Player():
     def _user_lookat_to_discard(self):
         choice = ''
         while choice not in ['n', 'N'] and self.lookat._count_ncards() > 0:
-            self.lookat._display()
-            choice = read_input(input(f'Would {self.name} like to discard a card? (card name or n/N)'), self)
+            self.lookat._display(conn=self.conn)
+            choice = self._send_recv(f'Would {self.name} like to discard a card? (card name or n/N)')
             if choice in ['n', 'N']:
                 break
             elif self._check_card_in_lookat(choice):
                 self._lookat_to_discard(choice)
 
     def _user_gain(self, force=False, max_cost=0):
-        self.supply._display()
+        self.supply._display(conn=self.conn)
         if force:
-            choice = read_input(input(f'Which card would {self.name} like to gain for up to {max_cost}? (card name)'), self)
+            choice = self._send_recv(f'Which card would {self.name} like to gain for up to {max_cost}? (card name)')
         else:
-            choice = read_input(input(f'Would {self.name} like to gain a card for up to {max_cost}? (card name or n/N)'), self)
+            choice = self._send_recv(f'Would {self.name} like to gain a card for up to {max_cost}? (card name or n/N)')
             if choice in ['n', 'N']:
                 return False
         if self._check_card_gain(choice, max_cost=max_cost):
@@ -191,10 +245,10 @@ class Player():
 
     def _user_hand_to_topdeck(self, force=False, type='any'):
         if force:
-            self.hand._display()
-            choice = read_input(input(f'Which card would {self.name} like to topdeck of type {type}? (card name)'), self)
+            self.hand._display(conn=self.conn)
+            choice = self._send_recv(f'Which card would {self.name} like to topdeck of type {type}? (card name)')
         else:
-            choice = read_input(input(f'Which card would {self.name} like to topdeck of type {type}? (card name or n/N)'), self)
+            choice = self._send_recv(f'Which card would {self.name} like to topdeck of type {type}? (card name or n/N)')
             if choice in ['n', 'N']:
                 return False
         if self._check_card_in_hand(choice):
@@ -204,6 +258,21 @@ class Player():
                 return self._user_hand_to_topdeck(force=force, type=type)
         else:
             return self._user_hand_to_topdeck(force=force, type=type)
+
+    def _user_discard_to_topdeck(self):
+        if self.discard._count_ncards() > 0:
+            self.discard._display(conn=self.conn)
+            choice_selected = False
+            while not choice_selected:
+                choice = self._send_recv('Would you like to put a discarded card onto your deck? (card name or N/n)')
+                if choice not in ['N', 'n']:
+                    if self._check_card_in_discard(choice):
+                        self._discard_to_topdeck(choice)
+                        choice_selected = True
+                else:
+                    choice_selected = True
+        else:
+            self._send_to_self('There are no cards in the discard :(')
                 
     """""""""""""""""""""""""""""""""
           INTERNAL CARD MOVEMENT
@@ -212,24 +281,24 @@ class Player():
         if len(self.draw.cards) >= ncards:
             for i in range(ncards):
                 self.hand.cards.append(self.draw.cards[0])
-                print(f'> {self.name} draws a {self.draw.cards[0].name}')
+                self._send_to_all(f'> {self.name} draws a {self.draw.cards[0].name}', f'> {self.name} draws a card.')
                 self.draw.cards.pop(0)
         else:
             if self._discard_to_draw():
                 self._draw(ncards)
     
     def _gain(self, card_name):
-        print(f'> {self.name} gains a {card_name}')
+        self._send_to_all(f'> {self.name} gains a {card_name}')
         self.supply._reduce_qty(card_name)
         self.discard._add_card(card_name)
 
     def _gain_to_hand(self, card_name):
-        print(f'> {self.name} gains a {card_name} to their hand.')
+        self._send_to_all(f'> {self.name} gains a {card_name} to their hand.')
         self.supply._reduce_qty(card_name)
         self.hand._add_card(card_name)
 
     def _gain_to_draw(self, card_name):
-        print(f'> {self.name} topdecks a {card_name}')
+        self._send_to_all(f'> {self.name} topdecks a {card_name}')
         self.supply._reduce_qty(card_name)
         self.draw._topdeck_card(card_name)  
         
@@ -239,22 +308,27 @@ class Player():
         
         self.hand._remove_card(card_name)
         self.discard._add_card(card_name)
-        print(f'> {self.name} discards a {card_name}.')
-
+        self._send_to_all(f'> {self.name} discards a {card_name}.', f'> {self.name} discards a card.')
+        
     def _discard_to_draw(self):
         self.discard._shuffle()
         if self.discard._count_ncards() == 0:
-            print(f'No cards in discard...')
+            self._send_to_self(f'No cards in discard...')
             return False
         else:
-            print(f'> {self.name} shuffles')
+            self._send_to_all(f'> {self.name} shuffles')
             for card in self.discard.cards:
                 self.draw._add_card(card.name)
             self.discard._empty()
             return True
 
+    def _discard_to_topdeck(self, card_name):
+        self.discard._remove_card(card_name)
+        self.draw._topdeck_card(card_name)
+        self._send_to_all(f'{self.name} topdecks a {card_name}')
+
     def _put_inplay(self, card_name):
-        print(f'> {self.name} plays a {card_name}')
+        self._send_to_all(f'> {self.name} plays a {card_name}')
         self.inplay._add_card(card_name)
         self.hand._remove_card(card_name)
 
@@ -264,7 +338,7 @@ class Player():
         self.inplay._empty()
 
     def _trash(self, card_name):
-        print(f'> {self.name} trashes a {card_name}')
+        self._send_to_all(f'> {self.name} trashes a {card_name}')
         self.hand._remove_card(card_name)
 
     def _lookat_draw_top(self, ncards=1):
@@ -277,36 +351,36 @@ class Player():
             if self._discard_to_draw():
                 self._lookat_draw_top(ncards=ncards)
 
-        print(f'> {self.name} looks at {self.lookat}')
+        self._send_to_all(f'> {self.name} looks at {self.lookat}.', f'> {self.name} looks at {self.lookat._count_ncards()} cards.')
 
     def _lookat_to_hand(self, card_name):
         self.lookat._remove_card(card_name)
         self.hand._add_card(card_name)
-        print(f'> {self.name} draws a {card_name}')
+        self._send_to_all(f'> {self.name} draws a {card_name}.', f'> {self.name} draws a card.')
 
     def _lookat_to_discard(self, card_name):
         self.lookat._remove_card(card_name)
         self.discard._add_card(card_name)
-        print(f'> {self.name} discards a {card_name}')
+        self._send_to_all(f'> {self.name} discards a {card_name}.', f'> {self.name} discards a card.')
 
     def _lookat_to_trash(self, card_name):
         self.lookat._remove_card(card_name)
-        print(f'> {self.name} trashes a {card_name}')
+        self._send_to_all(f'> {self.name} trashes a {card_name}.')
 
     def _lookat_to_topdeck(self, card_name):
         self.lookat._remove_card(card_name)
         self.draw._topdeck_card(card_name)
-        print(f'> {self.name} topdecks a {card_name}')
+        self._send_to_all(f'> {self.name} topdecks a {card_name}.', f'> {self.name} topdecks a card.')
 
     def _lookat_to_inplay(self, card_name):
         self.lookat._remove_card(card_name)
-        print(f'> {self.name} plays a {card_name}')
+        self._send_to_all(f'> {self.name} plays a {card_name}.')
         self.inplay._add_card(card_name)
 
     def _hand_to_topdeck(self, card_name):
         self.hand._remove_card(card_name)
         self.draw._topdeck_card(card_name)
-        print(f'> {self.name} topdecks a {card_name}')
+        self._send_to_all(f'> {self.name} topdecks a {card_name}.', f'> {self.name} topdecks a card.')
 
     def _finish(self):
         for card_name in self.hand._get_names():
@@ -320,9 +394,9 @@ class Player():
             count = self.deck._count_n_of_card(card_name)
             card = get_card(card_name)
             if card_name == 'Gardens':
-                print(f'> {self.name} had {count} {card_name}s for {self.deck._count_garden_points()} points')
+                self._send_to_all(f'> {self.name} had {count} {card_name}s for {self.deck._count_garden_points()} points.')
             else:
-                print(f'> {self.name} had {count} {card_name}s for {count * card.points} points')
+                self._send_to_all(f'> {self.name} had {count} {card_name}s for {count * card.points} points.')
 
         return self.deck._count_victory_points()
 
@@ -330,24 +404,22 @@ class Player():
     """""""""""""""""""""""""""""""""
                  CHECKS
     """""""""""""""""""""""""""""""""
-
-
     def _check_card_gain(self, card_name, max_cost=np.inf):
         if card_name in self.supply._get_card_names():
             if self.supply._check_qty(card_name) > 0:
                 if get_card(card_name).cost <= max_cost:
                     return True
                 else:
-                    print(f'Cannot gain {card_name} with maximum cost {max_cost}')
+                    self._send_to_self(f'Cannot gain {card_name} with maximum cost {max_cost}')
                     return False
             else:
-                print(f'Cannot gain {card_name} with Qty 0.')
+                self._send_to_self(f'Cannot gain {card_name} with Qty 0.')
                 return False
         elif card_name == '':
             return False
         else:
-            print(f'{card_name} does not exist in the supply.')
-            self.supply._display()
+            self._send_to_self(f'{card_name} does not exist in the supply.')
+            self.supply._display(conn=self.conn)
             return False
             
     
@@ -356,9 +428,8 @@ class Player():
             if self.supply._get_card_cost(card_name) <= self.turn.value:
                 return True
             else:
-                print(f'Cannot buy {card_name} with cost {self.supply._get_card_cost(card_name)} with value {self.turn.value}.')
+                self._send_to_self(f'Cannot buy {card_name} with cost {self.supply._get_card_cost(card_name)} with value {self.turn.value}.')
                 return False
-
 
     def _check_card_in_hand(self, card_name):
         if card_name in self.hand._get_names():
@@ -366,7 +437,7 @@ class Player():
         elif card_name == '':
             return False
         else:
-            print(f'{card_name} not in hand.')
+            self._send_to_self(f'{card_name} not in hand.')
             return False
 
     def _check_card_is_action(self, card_name):
@@ -376,7 +447,7 @@ class Player():
         elif card_name == '':
             return False
         else:
-            print(f'{card.name} is not an Action')
+            self._send_to_self(f'{card.name} is not an Action')
             return False
 
     def _check_card_is_treasure(self, card_name):
@@ -386,7 +457,7 @@ class Player():
         elif card_name == '':
             return False
         else:
-            print(f'{card.name} is not a Treasure')
+            self._send_to_self(f'{card.name} is not a Treasure')
             return False
             
     def _check_card_in_discard(self, card_name):
@@ -395,7 +466,7 @@ class Player():
         elif card_name == '':
             return False
         else:
-            print(f'{card_name} not in hand.')
+            self._send_to_self(f'{card_name} not in hand.')
             return False
 
     def _check_card_in_lookat(self, card_name):
@@ -404,8 +475,9 @@ class Player():
         elif card_name == '':
             return False
         else:
-            print(f'{card_name} not an option.')
+            self._send_to_self(f'{card_name} not an option.')
             return False
+
 
     
 

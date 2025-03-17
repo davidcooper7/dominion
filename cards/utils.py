@@ -5,13 +5,13 @@ from basegame import Copper, Silver, Gold, Estate, Duchy, Province, Curse, Cella
 
 def read_input(input, player):
     if input == 'Supply':
-        if hasattr(player, 'conn'):
+        if player.conn is not None:
             player.supply._display(conn=player.conn)
         else:
             player.supply._display()
         return read_input('', player)
     elif input == 'Hand':
-        if hasattr(player, 'conn'):
+        if player.conn is not None:
             player.hand._display(conn=player.conn)
         else:
             player.hand._display()
@@ -20,7 +20,7 @@ def read_input(input, player):
         try:
             card_name = convert_shorthand(input.split()[0])
             card = get_card(card_name)
-            if hasattr(player, 'conn'):
+            if player.conn is not None:
                 msg = card.__str__() + '_n'
                 player.conn.sendall(msg.encode())
                 time.sleep(0.01)
